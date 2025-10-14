@@ -61,7 +61,7 @@ else
         app.UseSwaggerUI(c =>
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "Wikipedia MCP Server API v1");
-            c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+            c.RoutePrefix = "swagger"; // Set Swagger UI at /swagger instead of root
         });
     }
 
@@ -78,7 +78,10 @@ else
     app.MapControllers();
 
     // Add a root endpoint
-    app.MapGet("/", () => "Wikipedia MCP Server is running! Visit /swagger for API documentation.");
+    app.MapGet("/", () => "Wikipedia MCP Server is running");
 
     app.Run();
 }
+
+// Make Program class accessible for integration tests
+public partial class Program { }

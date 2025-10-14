@@ -1,5 +1,34 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace WikipediaMcpServer.Models;
 
+// Request models for HTTP API
+public class WikipediaSearchRequest
+{
+    [Required(ErrorMessage = "Query is required")]
+    [MinLength(1, ErrorMessage = "Query cannot be empty")]
+    public string Query { get; set; } = string.Empty;
+}
+
+public class WikipediaSectionsRequest
+{
+    [Required(ErrorMessage = "Topic is required")]
+    [MinLength(1, ErrorMessage = "Topic cannot be empty")]
+    public string Topic { get; set; } = string.Empty;
+}
+
+public class WikipediaSectionContentRequest
+{
+    [Required(ErrorMessage = "Topic is required")]
+    [MinLength(1, ErrorMessage = "Topic cannot be empty")]
+    public string Topic { get; set; } = string.Empty;
+    
+    [Required(ErrorMessage = "SectionTitle is required")]
+    [MinLength(1, ErrorMessage = "SectionTitle cannot be empty")]
+    public string SectionTitle { get; set; } = string.Empty;
+}
+
+// Response models
 public class WikipediaSearchResult
 {
     public string Title { get; set; } = string.Empty;

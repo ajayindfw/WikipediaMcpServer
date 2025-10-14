@@ -1,6 +1,7 @@
 using System.Text.Json;
 using WikipediaMcpServer.Models;
 using WikipediaMcpServer.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace WikipediaMcpServer.Services;
 
@@ -186,8 +187,27 @@ public class McpServerService : BackgroundService
                 };
             }
 
-            using var scope = _serviceProvider.CreateScope();
-            var wikipediaService = scope.ServiceProvider.GetRequiredService<IWikipediaService>();
+            var scopeFactory = _serviceProvider.GetService<IServiceScopeFactory>();
+            if (scopeFactory == null)
+            {
+                return new McpResponse
+                {
+                    Id = request.Id,
+                    Error = new McpError { Code = -32603, Message = "Service configuration error" }
+                };
+            }
+
+            using var scope = scopeFactory.CreateScope();
+            var wikipediaService = scope.ServiceProvider.GetService<IWikipediaService>();
+            
+            if (wikipediaService == null)
+            {
+                return new McpResponse
+                {
+                    Id = request.Id,
+                    Error = new McpError { Code = -32603, Message = "Wikipedia service not available" }
+                };
+            }
 
             string resultText = callRequest.Name switch
             {

@@ -1,0 +1,58 @@
+Summary
+  Generated on: 10/14/2025 - 1:17:18 PM
+  Coverage date: 10/14/2025 - 1:05:59 PM
+  Parser: Cobertura
+  Assemblies: 1
+  Classes: 36
+  Files: 6
+  Line coverage: 67.6%
+  Covered lines: 399
+  Uncovered lines: 191
+  Coverable lines: 590
+  Total lines: 1065
+  Branch coverage: 63.8% (83 of 130)
+  Covered branches: 83
+  Total branches: 130
+  Method coverage: 73.1% (71 of 97)
+  Full method coverage: 68% (66 of 97)
+  Covered methods: 71
+  Fully covered methods: 66
+  Total methods: 97
+
+WikipediaMcpServer                                          67.6%
+  Program                                                      0%
+  WikipediaMcpServer.Controllers.WikipediaController           0%
+  WikipediaMcpServer.Models.McpClientCapabilities              0%
+  WikipediaMcpServer.Models.McpClientInfo                      0%
+  WikipediaMcpServer.Models.McpContent                       100%
+  WikipediaMcpServer.Models.McpError                        66.6%
+  WikipediaMcpServer.Models.McpInitializeRequest               0%
+  WikipediaMcpServer.Models.McpInitializeResponse            100%
+  WikipediaMcpServer.Models.McpProperty                      100%
+  WikipediaMcpServer.Models.McpRequest                       100%
+  WikipediaMcpServer.Models.McpResponse                      100%
+  WikipediaMcpServer.Models.McpServerCapabilities            100%
+  WikipediaMcpServer.Models.McpServerInfo                    100%
+  WikipediaMcpServer.Models.McpTool                          100%
+  WikipediaMcpServer.Models.McpToolCallRequest               100%
+  WikipediaMcpServer.Models.McpToolCallResponse              100%
+  WikipediaMcpServer.Models.McpToolInputSchema               100%
+  WikipediaMcpServer.Models.McpToolsCapability               100%
+  WikipediaMcpServer.Models.McpToolsListResponse             100%
+  WikipediaMcpServer.Models.WikipediaApiPage                   0%
+  WikipediaMcpServer.Models.WikipediaApiParse               66.6%
+  WikipediaMcpServer.Models.WikipediaApiParseContent        66.6%
+  WikipediaMcpServer.Models.WikipediaApiParseTextResponse    100%
+  WikipediaMcpServer.Models.WikipediaApiQuery                  0%
+  WikipediaMcpServer.Models.WikipediaApiSearchResponse         0%
+  WikipediaMcpServer.Models.WikipediaApiSection                0%
+  WikipediaMcpServer.Models.WikipediaApiSectionDetail       88.8%
+  WikipediaMcpServer.Models.WikipediaApiSectionResponse      100%
+  WikipediaMcpServer.Models.WikipediaSearchResult            100%
+  WikipediaMcpServer.Models.WikipediaSectionContentResult    100%
+  WikipediaMcpServer.Models.WikipediaSectionsResult          100%
+  WikipediaMcpServer.Services.McpServerService              75.2%
+  WikipediaMcpServer.Services.WikipediaContentUrls           100%
+  WikipediaMcpServer.Services.WikipediaDesktop               100%
+  WikipediaMcpServer.Services.WikipediaService              94.9%
+  WikipediaMcpServer.Services.WikipediaSummaryResponse       100%
