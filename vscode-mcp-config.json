@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "wikipedia-dotnet": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/Users/ajay.gupta/learning/ai/mcp/wikipedia/WikipediaMcpServer/WikipediaMcpServer.csproj",
+        "--",
+        "--mcp"
+      ],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Production"
+      }
+    }
+  }
+}
