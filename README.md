@@ -35,6 +35,7 @@ This server provides three main Wikipedia-related tools:
 3. Build the project:
 
    ```bash
+   cd src/WikipediaMcpServer
    dotnet build
    ```
 
@@ -95,97 +96,14 @@ This application can run as an MCP (Model Context Protocol) server that integrat
 
 ### Configuration Options
 
-#### Option 1: Using mcp.json File
-
-Create a `mcp.json` file in your project root:
-
-```json
-{
-  "mcpServers": {
-    "wikipedia-dotnet": {
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "/full/path/to/your/WikipediaMcpServer.csproj",
-        "--",
-        "--mcp"
-      ],
-      "env": {
-        "DOTNET_ENVIRONMENT": "Production"
-      }
-    }
-  }
-}
-```
-
-**Important**: Update the path in the `args` array to match your actual project location.
-
-#### Option 2: VS Code Settings Configuration
-
-1. Open VS Code Settings (JSON): `Cmd/Ctrl + Shift + P` → "Preferences: Open User Settings (JSON)"
-
-2. Add the MCP configuration:
-
-   ```json
-   {
-     "github.copilot.chat.mcp.servers": {
-       "wikipedia-dotnet": {
-         "command": "dotnet",
-         "args": [
-           "run",
-           "--project",
-           "/full/path/to/your/WikipediaMcpServer.csproj",
-           "--",
-           "--mcp"
-         ],
-         "env": {
-           "DOTNET_ENVIRONMENT": "Production"
-         }
-       }
-     }
-   }
-   ```
-
-#### Option 3: VS Code MCP Configuration File
-
-1. Open VS Code's global MCP configuration file:
-   - **macOS**: `~/Library/Application Support/Code/User/mcp.json`
-   - **Windows**: `%APPDATA%/Code/User/mcp.json`
-   - **Linux**: `~/.config/Code/User/mcp.json`
-
-2. Add the Wikipedia MCP server to your configuration:
-
-   ```json
-   {
-     "servers": {
-       "wikipedia-dotnet": {
-         "command": "dotnet",
-         "type": "stdio",
-         "args": [
-           "run",
-           "--project",
-           "/full/path/to/your/WikipediaMcpServer.csproj",
-           "--",
-           "--mcp"
-         ],
-         "env": {
-           "DOTNET_ENVIRONMENT": "Production"
-         }
-       }
-     }
-   }
-   ```
-
-#### Option 4: Claude Desktop Configuration
-
-To use with Claude Desktop:
+#### Option 1: Claude Desktop Configuration (Recommended)
 
 1. Open Claude Desktop's configuration file:
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
-2. Add the server configuration:
+2. Add the Wikipedia MCP server configuration:
 
    ```json
    {
@@ -195,7 +113,7 @@ To use with Claude Desktop:
          "args": [
            "run",
            "--project",
-           "/full/path/to/your/WikipediaMcpServer.csproj",
+           "/full/path/to/your/WikipediaMcpServer/src/WikipediaMcpServer/WikipediaMcpServer.csproj",
            "--",
            "--mcp"
          ],
@@ -207,7 +125,42 @@ To use with Claude Desktop:
    }
    ```
 
-3. Restart Claude Desktop to load the new configuration.
+3. **Important**: Update the path in the `args` array to match your actual project location.
+
+4. Restart Claude Desktop to load the new configuration.
+
+#### Option 2: VS Code Configuration
+
+1. Open VS Code's global MCP configuration file:
+   - **macOS**: `~/Library/Application Support/Code/User/mcp.json`
+   - **Windows**: `%APPDATA%/Code/User/mcp.json`
+   - **Linux**: `~/.config/Code/User/mcp.json`
+
+2. Add the Wikipedia MCP server configuration:
+
+   ```json
+   {
+     "servers": {
+       "wikipedia-dotnet": {
+         "command": "dotnet",
+         "args": [
+           "run",
+           "--project",
+           "/full/path/to/your/WikipediaMcpServer/src/WikipediaMcpServer/WikipediaMcpServer.csproj",
+           "--",
+           "--mcp"
+         ],
+         "env": {
+           "DOTNET_ENVIRONMENT": "Production"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Important**: Update the path in the `args` array to match your actual project location.
+
+4. Restart VS Code to load the new configuration.
 
 ### Available MCP Tools
 
@@ -239,7 +192,7 @@ You can use these tools through natural language requests in supported clients:
 1. Start the MCP Server:
 
    ```bash
-   dotnet run --project WikipediaMcpServer.csproj -- --mcp
+   dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj -- --mcp
    ```
 
 2. Send test messages by copying and pasting these JSON messages:
@@ -279,7 +232,7 @@ You can use these tools through natural language requests in supported clients:
 Start the HTTP server:
 
 ```bash
-dotnet run --project WikipediaMcpServer.csproj
+dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj
 ```
 
 #### Option A: Using Postman (Recommended)
@@ -378,7 +331,7 @@ curl "http://localhost:5070/api/wikipedia/section-content?topic=Python%20%28prog
 
 ```bash
 # Check if project builds
-dotnet build WikipediaMcpServer.csproj
+dotnet build src/WikipediaMcpServer/WikipediaMcpServer.csproj
 
 # Check for any compilation errors
 dotnet run --project WikipediaMcpServer.csproj --dry-run
@@ -416,21 +369,27 @@ When running in development mode, visit `http://localhost:5070` to access the Sw
 
 ```text
 WikipediaMcpServer/
-├── Controllers/
-│   └── WikipediaController.cs                    # API endpoints
-├── Models/
-│   ├── McpModels.cs                              # MCP protocol models
-│   └── WikipediaModels.cs                       # Wikipedia data models and DTOs
-├── Services/
-│   ├── McpServerService.cs                      # MCP protocol handling
-│   └── WikipediaService.cs                      # Wikipedia API integration
-├── Properties/
-│   └── launchSettings.json                      # Launch configuration
-├── Program.cs                                   # Application configuration and startup
-├── WikipediaMcpServer.csproj                   # Project file
-├── mcp.json                                     # MCP server configuration
-├── appsettings.json                             # Application settings
-├── WikipediaMcpServer-Postman-Collection.json  # Postman test collection
+├── src/
+│   └── WikipediaMcpServer/
+│       ├── Controllers/
+│       │   └── WikipediaController.cs                    # API endpoints
+│       ├── Models/
+│       │   ├── McpModels.cs                              # MCP protocol models
+│       │   └── WikipediaModels.cs                       # Wikipedia data models and DTOs
+│       ├── Services/
+│       │   ├── McpServerService.cs                      # MCP protocol handling
+│       │   └── WikipediaService.cs                      # Wikipedia API integration
+│       ├── Properties/
+│       │   └── launchSettings.json                      # Launch configuration
+│       ├── Program.cs                                   # Application configuration and startup
+│       ├── WikipediaMcpServer.csproj                   # Project file
+│       ├── appsettings.json                             # Application settings
+│       └── appsettings.Development.json                # Development settings
+├── tests/                                               # Test projects (future)
+├── docs/                                               # Additional documentation
+├── mcp.json                                            # Example MCP configuration (reference only)
+├── WikipediaMcpServer.sln                             # Solution file
+├── WikipediaMcpServer-Postman-Collection.json         # Postman test collection
 └── WikipediaMcpServer-Environment.postman_environment.json  # Postman environment
 ```
 
@@ -440,7 +399,7 @@ The application uses several configuration approaches:
 
 - `appsettings.json` - Production settings
 - `appsettings.Development.json` - Development settings
-- `mcp.json` - MCP server configuration (can be used by various MCP clients)
+- `mcp.json` - Example MCP configuration file (reference only - not used by VS Code or Claude Desktop)
 
 ## Testing Files
 

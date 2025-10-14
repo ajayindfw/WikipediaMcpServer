@@ -34,7 +34,12 @@ public class WikipediaService : IWikipediaService
             var encodedQuery = Uri.EscapeDataString(query);
             var searchUrl = $"{WikipediaApiUrl}/page/summary/{encodedQuery}";
 
+            _logger.LogInformation("🔍 Wikipedia Search Request: {Url}", searchUrl);
+            
             var response = await _httpClient.GetAsync(searchUrl);
+
+            _logger.LogInformation("📡 Wikipedia Search Response: Status={Status}, Query='{Query}'", 
+                response.StatusCode, query);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -44,6 +49,8 @@ public class WikipediaService : IWikipediaService
             }
 
             var content = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("📥 Wikipedia Search Content Length: {Length} characters", content.Length);
+            
             var options = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -78,7 +85,12 @@ public class WikipediaService : IWikipediaService
             var encodedTopic = Uri.EscapeDataString(topic);
             var sectionsUrl = $"https://en.wikipedia.org/w/api.php?action=parse&page={encodedTopic}&prop=sections&format=json";
 
+            _logger.LogInformation("📑 Wikipedia Sections Request: {Url}", sectionsUrl);
+            
             var response = await _httpClient.GetAsync(sectionsUrl);
+
+            _logger.LogInformation("📡 Wikipedia Sections Response: Status={Status}, Topic='{Topic}'", 
+                response.StatusCode, topic);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -88,6 +100,7 @@ public class WikipediaService : IWikipediaService
             }
 
             var content = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("📥 Wikipedia Sections Content Length: {Length} characters", content.Length);
             
             var options = new JsonSerializerOptions
             {
@@ -146,6 +159,9 @@ public class WikipediaService : IWikipediaService
             
             // First, get all sections to find the section index
             var sectionsUrl = $"https://en.wikipedia.org/w/api.php?action=parse&page={encodedTopic}&prop=sections&format=json";
+            
+            _logger.LogInformation("📖 Wikipedia Section Content Request (Step 1): {Url}", sectionsUrl);
+            
             var sectionsResponse = await _httpClient.GetAsync(sectionsUrl);
             
             if (!sectionsResponse.IsSuccessStatusCode)
@@ -186,7 +202,13 @@ public class WikipediaService : IWikipediaService
 
             // Get the section content using the section index
             var contentUrl = $"https://en.wikipedia.org/w/api.php?action=parse&page={encodedTopic}&section={targetSection.Index}&prop=text&format=json";
+            
+            _logger.LogInformation("📖 Wikipedia Section Content Request (Step 2): {Url}", contentUrl);
+            
             var contentResponse = await _httpClient.GetAsync(contentUrl);
+
+            _logger.LogInformation("📡 Wikipedia Section Content Response: Status={Status}, Topic='{Topic}', Section='{Section}'", 
+                contentResponse.StatusCode, topic, sectionTitle);
 
             if (!contentResponse.IsSuccessStatusCode)
             {
@@ -196,6 +218,7 @@ public class WikipediaService : IWikipediaService
             }
 
             var contentText = await contentResponse.Content.ReadAsStringAsync();
+            _logger.LogInformation("📥 Wikipedia Section Content Length: {Length} characters", contentText.Length);
             var parseResponse = JsonSerializer.Deserialize<WikipediaApiParseTextResponse>(contentText, sectionsOptions);
 
             if (parseResponse?.Parse?.Text == null)
