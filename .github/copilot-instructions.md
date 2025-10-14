@@ -27,4 +27,4 @@ The Wikipedia MCP Server is fully operational with:
 - Solution file: `WikipediaMcpServer.sln` (updated for new structure)
 - Build command: `dotnet build src/WikipediaMcpServer/WikipediaMcpServer.csproj`
 - Run command: `dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj`
-- Test script: `./test-quick.sh` (updated for new paths)
+- Test script: `./test-json-rpc.sh` (updated for new paths, tests JSON-RPC MCP protocol)
