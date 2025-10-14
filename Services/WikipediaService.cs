@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Web;
 using WikipediaMcpServer.Models;
 
@@ -30,7 +31,7 @@ public class WikipediaService : IWikipediaService
     {
         try
         {
-            var encodedQuery = HttpUtility.UrlEncode(query);
+            var encodedQuery = Uri.EscapeDataString(query);
             var searchUrl = $"{WikipediaApiUrl}/page/summary/{encodedQuery}";
 
             var response = await _httpClient.GetAsync(searchUrl);
@@ -74,7 +75,7 @@ public class WikipediaService : IWikipediaService
     {
         try
         {
-            var encodedTopic = HttpUtility.UrlEncode(topic);
+            var encodedTopic = Uri.EscapeDataString(topic);
             var sectionsUrl = $"https://en.wikipedia.org/w/api.php?action=parse&page={encodedTopic}&prop=sections&format=json";
 
             var response = await _httpClient.GetAsync(sectionsUrl);
@@ -141,7 +142,7 @@ public class WikipediaService : IWikipediaService
     {
         try
         {
-            var encodedTopic = HttpUtility.UrlEncode(topic);
+            var encodedTopic = Uri.EscapeDataString(topic);
             
             // First, get all sections to find the section index
             var sectionsUrl = $"https://en.wikipedia.org/w/api.php?action=parse&page={encodedTopic}&prop=sections&format=json";
@@ -262,6 +263,8 @@ public class WikipediaSummaryResponse
 {
     public string Title { get; set; } = string.Empty;
     public string? Extract { get; set; }
+    
+    [JsonPropertyName("content_urls")]
     public WikipediaContentUrls? ContentUrls { get; set; }
 }
 

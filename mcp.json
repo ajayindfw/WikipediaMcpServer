@@ -5,7 +5,7 @@
       "args": [
         "run",
         "--project",
-        "/Users/ajay.gupta/learning/ai/mcp/wikipedia/WikipediaMcpServer/WikipediaMcpServer.csproj",
+        "/full/path/to/your/WikipediaMcpServer.csproj",
         "--",
         "--mcp"
       ],

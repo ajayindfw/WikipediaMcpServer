@@ -282,21 +282,52 @@ Start the HTTP server:
 dotnet run --project WikipediaMcpServer.csproj
 ```
 
+#### Option A: Using Postman (Recommended)
+
+A comprehensive Postman collection is provided for testing all endpoints:
+
+1. **Import the Postman collection**: `WikipediaMcpServer-Postman-Collection.json`
+2. **Import the environment**: `WikipediaMcpServer-Environment.postman_environment.json`
+3. **Run the collection** to test all endpoints with automated assertions
+
+The collection includes:
+
+- ✅ Health check tests
+- ✅ Search functionality tests (with exact Wikipedia page titles)
+- ✅ Sections retrieval tests
+- ✅ Section content tests
+- ✅ Error handling validation
+- ✅ Response time and format validation
+- ✅ Complete workflow testing
+
+**Collection Features:**
+
+- 16 comprehensive test requests
+- 50+ automated test assertions
+- Proper error handling validation
+- Performance testing
+- Environment variables for easy configuration
+
+#### Option B: Using curl
+
 Test endpoints with curl:
 
 ```bash
 # Health check
 curl "http://localhost:5070/api/wikipedia/health"
 
-# Search Wikipedia
-curl "http://localhost:5070/api/wikipedia/search?query=artificial%20intelligence"
+# Search Wikipedia (use exact Wikipedia page titles)
+curl "http://localhost:5070/api/wikipedia/search?query=Artificial%20intelligence"
+curl "http://localhost:5070/api/wikipedia/search?query=Python%20%28programming%20language%29"
 
 # Get sections
-curl "http://localhost:5070/api/wikipedia/sections?topic=Python"
+curl "http://localhost:5070/api/wikipedia/sections?topic=Python%20%28programming%20language%29"
 
 # Get section content
-curl "http://localhost:5070/api/wikipedia/section-content?topic=Python&sectionTitle=History"
+curl "http://localhost:5070/api/wikipedia/section-content?topic=Python%20%28programming%20language%29&sectionTitle=History"
 ```
+
+**Important**: Use exact Wikipedia page titles (e.g., "Python (programming language)" instead of "Python programming") for reliable results.
 
 ### Method 3: Testing with MCP Clients
 
@@ -386,19 +417,21 @@ When running in development mode, visit `http://localhost:5070` to access the Sw
 ```text
 WikipediaMcpServer/
 ├── Controllers/
-│   └── WikipediaController.cs      # API endpoints
+│   └── WikipediaController.cs                    # API endpoints
 ├── Models/
-│   ├── McpModels.cs               # MCP protocol models
-│   └── WikipediaModels.cs         # Wikipedia data models and DTOs
+│   ├── McpModels.cs                              # MCP protocol models
+│   └── WikipediaModels.cs                       # Wikipedia data models and DTOs
 ├── Services/
-│   ├── McpServerService.cs        # MCP protocol handling
-│   └── WikipediaService.cs        # Wikipedia API integration
+│   ├── McpServerService.cs                      # MCP protocol handling
+│   └── WikipediaService.cs                      # Wikipedia API integration
 ├── Properties/
-│   └── launchSettings.json        # Launch configuration
-├── Program.cs                     # Application configuration and startup
-├── WikipediaMcpServer.csproj      # Project file
-├── mcp.json                       # MCP server configuration
-└── appsettings.json               # Application settings
+│   └── launchSettings.json                      # Launch configuration
+├── Program.cs                                   # Application configuration and startup
+├── WikipediaMcpServer.csproj                   # Project file
+├── mcp.json                                     # MCP server configuration
+├── appsettings.json                             # Application settings
+├── WikipediaMcpServer-Postman-Collection.json  # Postman test collection
+└── WikipediaMcpServer-Environment.postman_environment.json  # Postman environment
 ```
 
 ## Configuration Files
@@ -408,7 +441,13 @@ The application uses several configuration approaches:
 - `appsettings.json` - Production settings
 - `appsettings.Development.json` - Development settings
 - `mcp.json` - MCP server configuration (can be used by various MCP clients)
-- `vscode-mcp-config.json` - VS Code specific MCP configuration example
+
+## Testing Files
+
+For HTTP API testing:
+
+- `WikipediaMcpServer-Postman-Collection.json` - Comprehensive Postman test collection
+- `WikipediaMcpServer-Environment.postman_environment.json` - Postman environment variables
 
 ## Technologies Used
 

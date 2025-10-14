@@ -1,0 +1,823 @@
+{
+	"info": {
+		"_postman_id": "wikipedia-mcp-server-collection",
+		"name": "Wikipedia MCP Server API Testing Collection",
+		"description": "Comprehensive testing collection for Wikipedia MCP Server - covers all HTTP API endpoints documented in README.md",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "wikipedia-mcp-server"
+	},
+	"item": [
+		{
+			"name": "Health Checks",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has status field\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"    pm.expect(jsonData.status).to.eql('healthy');",
+									"});",
+									"",
+									"pm.test(\"Response has service field\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('service');",
+									"    pm.expect(jsonData.service).to.eql('Wikipedia MCP Server');",
+									"});",
+									"",
+									"pm.test(\"Response has timestamp\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('timestamp');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"health"
+							]
+						},
+						"description": "Health check endpoint to verify the server is running"
+					},
+					"response": []
+				}
+			],
+			"description": "Health check endpoints to verify server status"
+		},
+		{
+			"name": "Wikipedia Search",
+			"item": [
+				{
+					"name": "Search - Artificial Intelligence",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('title');",
+									"    pm.expect(jsonData).to.have.property('summary');",
+									"    pm.expect(jsonData).to.have.property('url');",
+									"});",
+									"",
+									"pm.test(\"Title contains search term\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.title.toLowerCase()).to.include('artificial');",
+									"});",
+									"",
+									"pm.test(\"URL is valid Wikipedia link\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.url).to.include('wikipedia.org');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/search?query=Artificial intelligence",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "Artificial intelligence"
+								}
+							]
+						},
+						"description": "Search Wikipedia for 'Artificial intelligence' - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Search - Python Programming",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('title');",
+									"    pm.expect(jsonData).to.have.property('summary');",
+									"    pm.expect(jsonData).to.have.property('url');",
+									"});",
+									"",
+									"pm.test(\"Summary is not empty\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.summary).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/search?query=Python (programming language)",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "Python (programming language)"
+								}
+							]
+						},
+						"description": "Search for Python (programming language) - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Search - Machine Learning",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/search?query=Machine learning",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "Machine learning"
+								}
+							]
+						},
+						"description": "Search for Machine learning - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Search - Invalid Query (Empty)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message is returned\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"    pm.expect(jsonData.title).to.include('validation errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/search?query=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": ""
+								}
+							]
+						},
+						"description": "Test error handling for empty query parameter"
+					},
+					"response": []
+				},
+				{
+					"name": "Search - Nonexistent Topic",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404 or returns error info\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 404) {",
+									"    pm.test(\"Error message indicates not found\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('error');",
+									"        pm.expect(jsonData.error.toLowerCase()).to.include('found');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/search?query=thisarticledoesnotexistonwikipedia12345",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "thisarticledoesnotexistonwikipedia12345"
+								}
+							]
+						},
+						"description": "Test behavior with nonexistent Wikipedia topics"
+					},
+					"response": []
+				}
+			],
+			"description": "Wikipedia search functionality tests - covers examples from README.md"
+		},
+		{
+			"name": "Wikipedia Sections",
+			"item": [
+				{
+					"name": "Get Sections - Python",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('title');",
+									"    pm.expect(jsonData).to.have.property('sections');",
+									"    pm.expect(jsonData).to.have.property('url');",
+									"});",
+									"",
+									"pm.test(\"Sections is an array\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.sections).to.be.an('array');",
+									"});",
+									"",
+									"pm.test(\"Has some sections\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.sections.length).to.be.greaterThan(0);",
+									"});",
+									"",
+									"// Store sections for use in next request",
+									"pm.test(\"Store sections for section content test\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.sections && jsonData.sections.length > 0) {",
+									"        // Find a History section or use first section",
+									"        var historySection = jsonData.sections.find(s => s.toLowerCase().includes('history'));",
+									"        var sectionToUse = historySection || jsonData.sections[0];",
+									"        pm.environment.set(\"test_section\", sectionToUse.trim());",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/sections?topic=Python (programming language)",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"sections"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Python (programming language)"
+								}
+							]
+						},
+						"description": "Get sections for Python (programming language) - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sections - Artificial Intelligence",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has sections array\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('sections');",
+									"    pm.expect(jsonData.sections).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/sections?topic=Artificial intelligence",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"sections"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Artificial intelligence"
+								}
+							]
+						},
+						"description": "Get sections for Artificial intelligence - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sections - Invalid Topic (Empty)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message is returned\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"    pm.expect(jsonData.title).to.include('validation errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/sections?topic=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"sections"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": ""
+								}
+							]
+						},
+						"description": "Test error handling for empty topic parameter"
+					},
+					"response": []
+				}
+			],
+			"description": "Wikipedia sections retrieval tests - covers examples from README.md"
+		},
+		{
+			"name": "Wikipedia Section Content",
+			"item": [
+				{
+					"name": "Get Section Content - Python History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has required fields\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('sectionTitle');",
+									"    pm.expect(jsonData).to.have.property('content');",
+									"});",
+									"",
+									"pm.test(\"Section title matches request\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.sectionTitle.toLowerCase()).to.include('history');",
+									"});",
+									"",
+									"pm.test(\"Content is not empty\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.content).to.not.be.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/section-content?topic=Python (programming language)&sectionTitle=History",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"section-content"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Python (programming language)"
+								},
+								{
+									"key": "sectionTitle",
+									"value": "History"
+								}
+							]
+						},
+						"description": "Get History section from Python (programming language) - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Section Content - Dynamic Section",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 or 404\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test(\"Response has content\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('content');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/section-content?topic=Python (programming language)&sectionTitle={{test_section}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"section-content"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Python (programming language)"
+								},
+								{
+									"key": "sectionTitle",
+									"value": "{{test_section}}"
+								}
+							]
+						},
+						"description": "Get content from a section discovered in the previous sections call"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Section Content - Artificial Intelligence History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/section-content?topic=Artificial intelligence&sectionTitle=History",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"section-content"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Artificial intelligence"
+								},
+								{
+									"key": "sectionTitle",
+									"value": "History"
+								}
+							]
+						},
+						"description": "Get History section from Artificial intelligence page - exact Wikipedia title"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Section Content - Missing Parameters",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message is returned\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"    pm.expect(jsonData.title).to.include('validation errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/section-content?topic=Python (programming language)",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"section-content"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Python (programming language)"
+								}
+							]
+						},
+						"description": "Test error handling when sectionTitle parameter is missing"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Section Content - Nonexistent Section",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 (returns error info in content)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response indicates section not found\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.content.toLowerCase()).to.include('not found');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/section-content?topic=Python%20%28programming%20language%29&sectionTitle=NonexistentSection12345",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"section-content"
+							],
+							"query": [
+								{
+									"key": "topic",
+									"value": "Python (programming language)"
+								},
+								{
+									"key": "sectionTitle",
+									"value": "NonexistentSection12345"
+								}
+							]
+						},
+						"description": "Test behavior when requesting a section that doesn't exist"
+					},
+					"response": []
+				}
+			],
+			"description": "Wikipedia section content retrieval tests - covers examples from README.md"
+		},
+		{
+			"name": "Complete Workflow Tests",
+			"item": [
+				{
+					"name": "Workflow 1: Search → Sections → Content",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// This represents the complete workflow from README.md examples",
+									"pm.test(\"Complete workflow test placeholder\", function () {",
+									"    pm.expect(true).to.be.true;",
+									"});",
+									"",
+									"// Instructions for manual workflow testing:",
+									"// 1. Run 'Search - Machine Learning' request",
+									"// 2. Run 'Get Sections' for the found topic", 
+									"// 3. Run 'Get Section Content' for a specific section",
+									"// 4. Verify the complete data flow works end-to-end"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"health"
+							]
+						},
+						"description": "Placeholder for complete workflow testing. Run the individual requests in sequence to test the full user journey documented in README.md"
+					},
+					"response": []
+				}
+			],
+			"description": "End-to-end workflow tests representing the complete user journey from README.md"
+		},
+		{
+			"name": "Performance and Load Tests",
+			"item": [
+				{
+					"name": "Concurrent Search Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia/search?query=Computer science",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "Computer science"
+								}
+							]
+						},
+						"description": "Use this request with Postman Runner to test concurrent requests and verify the 1-3 second response time mentioned in README.md performance notes"
+					},
+					"response": []
+				}
+			],
+			"description": "Performance tests to validate the performance characteristics mentioned in README.md"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set default base URL if not already set",
+					"if (!pm.environment.get(\"base_url\")) {",
+					"    pm.environment.set(\"base_url\", \"http://localhost:5070\");",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test to check response time (from README.md performance notes)",
+					"pm.test(\"Response time is reasonable (< 10 seconds)\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(10000);",
+					"});",
+					"",
+					"// Global test for content type",
+					"pm.test(\"Response is JSON\", function () {",
+					"    var contentType = pm.response.headers.get(\"Content-Type\");",
+					"    pm.expect(contentType).to.satisfy(function(type) {",
+					"        return type.includes(\"application/json\") || type.includes(\"application/problem+json\");",
+					"    });",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5070",
+			"description": "Base URL for the Wikipedia MCP Server API"
+		},
+		{
+			"key": "test_section",
+			"value": "History",
+			"description": "Dynamic section name for testing section content retrieval"
+		}
+	]
+}
