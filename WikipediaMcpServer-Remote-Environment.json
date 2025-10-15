@@ -1,0 +1,57 @@
+{
+	"id": "wikipedia-mcp-server-remote-env",
+	"name": "Wikipedia MCP Server - Remote Environments",
+	"values": [
+		{
+			"key": "base_url",
+			"value": "https://your-service-name.onrender.com",
+			"description": "Replace with your actual Render deployment URL",
+			"enabled": true
+		},
+		{
+			"key": "render_url",
+			"value": "https://wikipedia-mcp-server.onrender.com",
+			"description": "Example Render deployment URL - update with your actual URL",
+			"enabled": false
+		},
+		{
+			"key": "railway_url",
+			"value": "https://your-app.railway.app",
+			"description": "Example Railway deployment URL - update with your actual URL",
+			"enabled": false
+		},
+		{
+			"key": "azure_url",
+			"value": "https://your-container.azurecontainer.io",
+			"description": "Example Azure Container Instance URL",
+			"enabled": false
+		},
+		{
+			"key": "gcp_url",
+			"value": "https://your-service-run.a.run.app",
+			"description": "Example Google Cloud Run URL",
+			"enabled": false
+		},
+		{
+			"key": "api_timeout",
+			"value": "10000",
+			"description": "API timeout in milliseconds for remote testing",
+			"enabled": true
+		},
+		{
+			"key": "test_query",
+			"value": "artificial intelligence",
+			"description": "Default test query for Wikipedia searches",
+			"enabled": true
+		},
+		{
+			"key": "environment_type",
+			"value": "Production",
+			"description": "Expected environment type for remote deployments",
+			"enabled": true
+		}
+	],
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2025-10-15T00:00:00.000Z",
+	"_postman_exported_using": "Postman/10.0.0"
+}

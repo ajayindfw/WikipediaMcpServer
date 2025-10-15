@@ -36,6 +36,11 @@ else
     builder.WebHost.ConfigureKestrel(options =>
     {
         options.AddServerHeader = false; // Security: Remove server header
+        
+        // For cloud deployments (Render, Railway, etc.), only listen on HTTP
+        // HTTPS termination is handled by the platform's load balancer
+        var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+        options.ListenAnyIP(int.Parse(port));
     });
 
     // Add services to the container.
@@ -75,6 +80,20 @@ else
         });
     });
 
+    // Configure forwarded headers for reverse proxy (Render, Railway, etc.)
+    if (builder.Environment.IsProduction())
+    {
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor |
+                                     Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto |
+                                     Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost;
+            options.RequireHeaderSymmetry = false;
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
+    }
+
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
@@ -87,6 +106,12 @@ else
     });
 
     var app = builder.Build();
+
+    // Configure forwarded headers for reverse proxy (must be early in pipeline)
+    if (app.Environment.IsProduction())
+    {
+        app.UseForwardedHeaders();
+    }
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())

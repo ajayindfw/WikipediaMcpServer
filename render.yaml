@@ -6,7 +6,7 @@ services:
     region: oregon  # Available regions: oregon, frankfurt, singapore
     buildCommand: |
       dotnet restore src/WikipediaMcpServer/WikipediaMcpServer.csproj
-      dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish
+      dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore
     startCommand: dotnet ./publish/WikipediaMcpServer.dll
     healthCheckPath: /api/wikipedia/health
     envVars:
@@ -18,6 +18,10 @@ services:
         value: Production
       - key: MCP_MODE
         value: "false"  # Set to "true" for MCP-only mode
+      - key: ASPNETCORE_HTTPS_PORT
+        value: ""  # Disable HTTPS port configuration
+      - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+        value: "true"  # Enable forwarded headers for reverse proxy
     # Auto-deploy from GitHub
     autoDeploy: true
     # Custom domains (optional)
