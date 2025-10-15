@@ -32,14 +32,48 @@ else
     // HTTP API mode
     var builder = WebApplication.CreateBuilder(args);
 
+    // Configure Kestrel for production deployment
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.AddServerHeader = false; // Security: Remove server header
+    });
+
     // Add services to the container.
     builder.Services.AddControllers();
 
-    // Add HTTP client for Wikipedia API calls
-    builder.Services.AddHttpClient<IWikipediaService, WikipediaService>();
+    // Add HTTP client for Wikipedia API calls with timeout configuration
+    builder.Services.AddHttpClient<IWikipediaService, WikipediaService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
 
     // Register Wikipedia service
     builder.Services.AddScoped<IWikipediaService, WikipediaService>();
+
+    // Add health checks
+    builder.Services.AddHealthChecks()
+        .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
+
+    // Configure CORS for production
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            }
+            else
+            {
+                // Production CORS - restrict as needed
+                policy.WithOrigins("*") // Configure specific origins in production
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            }
+        });
+    });
 
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
@@ -65,20 +99,42 @@ else
         });
     }
 
-    // Add CORS for development
-    app.UseCors(policy =>
+    // Security headers for production
+    if (app.Environment.IsProduction())
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        app.Use(async (context, next) =>
+        {
+            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            context.Response.Headers["X-Frame-Options"] = "DENY";
+            context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+            context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+            await next();
+        });
+    }
+
+    // Add CORS
+    app.UseCors();
+
+    // Add health check endpoint
+    app.MapHealthChecks("/api/wikipedia/health");
 
     app.UseAuthorization();
 
     app.MapControllers();
 
-    // Add a root endpoint
-    app.MapGet("/", () => "Wikipedia MCP Server is running");
+    // Add a root endpoint with API information
+    app.MapGet("/", () => new { 
+        name = "Wikipedia MCP Server", 
+        version = "v5.0",
+        status = "running",
+        endpoints = new {
+            health = "/api/wikipedia/health",
+            search = "/api/wikipedia/search",
+            sections = "/api/wikipedia/sections",
+            sectionContent = "/api/wikipedia/section-content",
+            swagger = "/swagger"
+        }
+    });
 
     app.Run();
 }

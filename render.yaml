@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: wikipedia-mcp-server
+    runtime: docker
+    plan: free  # Change to 'starter' or higher for production
+    region: oregon  # Available regions: oregon, frankfurt, singapore
+    buildCommand: |
+      dotnet restore src/WikipediaMcpServer/WikipediaMcpServer.csproj
+      dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/WikipediaMcpServer.dll
+    healthCheckPath: /api/wikipedia/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:$PORT
+      - key: DOTNET_ENVIRONMENT
+        value: Production
+      - key: MCP_MODE
+        value: "false"  # Set to "true" for MCP-only mode
+    # Auto-deploy from GitHub
+    autoDeploy: true
+    # Custom domains (optional)
+    # domains:
+    #   - your-custom-domain.com

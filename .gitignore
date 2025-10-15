@@ -458,6 +458,17 @@ secrets.json
 .env.test.local
 .env.production.local
 
+# Deployment files
+publish/
+dist/
+
+# Docker
+.dockerignore
+
+# Platform-specific deployment files
+.railway/
+.render/
+
 # Log files
 *.log
 logs/
