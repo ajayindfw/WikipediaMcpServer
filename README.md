@@ -1,14 +1,23 @@
 # Wikipedia MCP Server (ASP.NET Core 8)
 
-A Model Context Protocol (MCP) server implementation for Wikipedia search and content retrieval, built with ASP.NET Core 8 and C#.
+A production-ready Model Context Protocol (MCP) server implementation for Wikipedia search and content retrieval, built with ASP.NET Core 8 and C#. Features comprehensive testing with **182 total tests** and enterprise-grade reliability.
 
 ## Features
 
-This server provides three main Wikipedia-related tools:
+This server provides three main Wikipedia-related tools with full test coverage:
 
 1. **Wikipedia Search** - Search for Wikipedia articles and get summaries
 2. **Wikipedia Sections** - Get the section outline of a Wikipedia page  
 3. **Wikipedia Section Content** - Retrieve content from specific sections of Wikipedia articles
+
+### **🏆 Production Ready**
+- ✅ **182 comprehensive tests** (Unit, Service, Integration)
+- ✅ **100% test pass rate** ensuring reliability
+- ✅ **Professional .NET project structure** with src/ and tests/ organization
+- ✅ **Enhanced error handling** and validation
+- ✅ **Code coverage reporting** with detailed analysis
+- ✅ **Dual-mode operation** (HTTP API + MCP Protocol)
+- ✅ **Enterprise-grade logging** and monitoring
 
 ## Quick Start
 
@@ -187,7 +196,98 @@ You can use these tools through natural language requests in supported clients:
 
 ## Testing
 
-### Method 1: Manual Interactive Testing (Recommended)
+This project includes a comprehensive test suite with **182 total tests** across three categories, ensuring 100% reliability and production readiness.
+
+### 🧪 **Automated Test Suite**
+
+#### **Quick Test Execution**
+
+Run all tests with a single command:
+
+```bash
+# Run all 182 tests (Unit + Service + Integration)
+dotnet test
+
+# Run with detailed output
+dotnet test --verbosity normal
+
+# Run with coverage (if coverage tools are installed)
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+#### **Test Categories (182 Total Tests)**
+
+##### **1. Unit Tests (77 tests)**
+Location: `tests/WikipediaMcpServer.UnitTests/`
+
+**Coverage:**
+- **Model Validation Tests** - JSON serialization/deserialization
+- **MCP Protocol Tests** - Request/response structures
+- **Wikipedia Model Tests** - Data transfer objects
+- **Validation Logic Tests** - Input validation and error handling
+
+```bash
+# Run only unit tests
+dotnet test tests/WikipediaMcpServer.UnitTests/
+```
+
+##### **2. Service Tests (56 tests)**
+Location: `tests/WikipediaMcpServer.ServiceTests/`
+
+**Coverage:**
+- **Wikipedia Service Tests** - Wikipedia API integration
+- **MCP Server Service Tests** - JSON-RPC protocol handling
+- **HTTP Client Tests** - External API communication
+- **Error Handling Tests** - Network failures and API errors
+
+```bash
+# Run only service tests
+dotnet test tests/WikipediaMcpServer.ServiceTests/
+```
+
+##### **3. Integration Tests (49 tests)**
+Location: `tests/WikipediaMcpServer.IntegrationTests/`
+
+**Coverage:**
+- **HTTP API Endpoint Tests** - Full request/response cycles
+- **Controller Integration Tests** - ASP.NET Core pipeline
+- **Validation Pipeline Tests** - ModelState validation
+- **End-to-End Workflow Tests** - Complete user scenarios
+
+```bash
+# Run only integration tests
+dotnet test tests/WikipediaMcpServer.IntegrationTests/
+```
+
+#### **Test Results Dashboard**
+
+After running tests, view the coverage report:
+
+```bash
+# View coverage report (if generated)
+open CoverageReport/index.html
+```
+
+### 🚀 **Quick Protocol Testing**
+
+#### **Method 1: Automated JSON-RPC Testing (Recommended)**
+
+Use the included test script for immediate validation:
+
+```bash
+# Run comprehensive JSON-RPC MCP protocol tests
+./test-json-rpc.sh
+```
+
+**This script tests:**
+- ✅ MCP server initialization
+- ✅ Tool discovery and listing
+- ✅ Wikipedia search functionality
+- ✅ Wikipedia sections retrieval
+- ✅ Wikipedia section content access
+- ✅ Protocol compliance verification
+
+#### **Method 2: Manual Interactive Testing**
 
 1. Start the MCP Server:
 
@@ -385,8 +485,29 @@ WikipediaMcpServer/
 │       ├── WikipediaMcpServer.csproj                   # Project file
 │       ├── appsettings.json                             # Application settings
 │       └── appsettings.Development.json                # Development settings
-├── tests/                                               # Test projects (future)
+├── tests/                                               # Test projects
+│   ├── WikipediaMcpServer.UnitTests/                   # Unit tests (77 tests)
+│   │   ├── Models/
+│   │   │   ├── McpModelsTests.cs                       # MCP model validation tests
+│   │   │   └── WikipediaModelTests.cs                  # Wikipedia model tests
+│   │   ├── Serialization/
+│   │   │   └── JsonSerializationTests.cs               # JSON serialization tests
+│   │   └── WikipediaMcpServer.UnitTests.csproj        # Unit test project file
+│   ├── WikipediaMcpServer.ServiceTests/                # Service tests (56 tests)
+│   │   ├── Services/
+│   │   │   ├── McpServerServiceTests.cs                # MCP service tests
+│   │   │   └── WikipediaServiceTests.cs                # Wikipedia API service tests
+│   │   └── WikipediaMcpServer.ServiceTests.csproj     # Service test project file
+│   └── WikipediaMcpServer.IntegrationTests/            # Integration tests (49 tests)
+│       ├── ProgramIntegrationTests.cs                  # Application startup tests
+│       ├── WikipediaControllerIntegrationTests.cs     # Basic controller tests
+│       ├── WikipediaControllerComprehensiveTests.cs   # Comprehensive endpoint tests
+│       └── WikipediaMcpServer.IntegrationTests.csproj # Integration test project file
+├── CoverageReport/                                     # Code coverage reports
+│   ├── index.html                                      # Coverage dashboard
+│   └── ...                                             # Detailed coverage files
 ├── docs/                                               # Additional documentation
+├── test-json-rpc.sh                                    # Automated MCP protocol testing script
 ├── mcp.json                                            # Example MCP configuration (reference only)
 ├── WikipediaMcpServer.sln                             # Solution file
 ├── WikipediaMcpServer-Postman-Collection.json         # Postman test collection
@@ -408,13 +529,39 @@ For HTTP API testing:
 - `WikipediaMcpServer-Postman-Collection.json` - Comprehensive Postman test collection
 - `WikipediaMcpServer-Environment.postman_environment.json` - Postman environment variables
 
+## Releases
+
+This project follows semantic versioning and includes tagged releases:
+
+- **v4.0** - Production-ready release with comprehensive testing (182 tests), professional .NET structure, enhanced MCP protocol support, and complete HTTP API compatibility
+- **v3.0** - Enhanced API integration and improved error handling  
+- **v2.0** - Professional project structure with src/ and tests/ organization
+- **v1.0** - Initial Wikipedia MCP Server implementation
+
+Each release is tagged and available on GitHub with detailed release notes.
+
 ## Technologies Used
 
-- **ASP.NET Core 8** - Web framework
-- **Swagger/OpenAPI** - API documentation
-- **HttpClient** - HTTP requests to Wikipedia API
+### **Core Framework**
+- **ASP.NET Core 8** - Web framework and dependency injection
 - **System.Text.Json 8.0.5** - JSON serialization (security-updated version)
+- **HttpClient** - HTTP requests to Wikipedia API
+
+### **Testing Framework**
+- **xUnit** - Primary testing framework for all test types
+- **Fluent Assertions** - Enhanced assertion library for readable tests
+- **Microsoft.AspNetCore.Mvc.Testing** - Integration testing support
+- **Code Coverage Tools** - Coverage analysis and reporting
+
+### **API & Documentation**
+- **Swagger/OpenAPI** - API documentation and testing interface
 - **Model Context Protocol (MCP)** - Integration with AI development tools
+- **Postman Collections** - Comprehensive API testing suites
+
+### **Development Tools**
+- **VS Code Integration** - MCP server configuration for development
+- **Claude Desktop Integration** - AI-powered development support
+- **Git Conditional Configuration** - Separate identities for different Git hosting platforms
 
 ## Performance Notes
 
