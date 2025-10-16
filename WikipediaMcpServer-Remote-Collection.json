@@ -232,7 +232,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"topic\": \"Machine Learning\"\n}"
+							"raw": "{\n    \"topic\": \"Artificial intelligence\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/wikipedia/sections",
@@ -276,7 +276,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"topic\": \"Artificial Intelligence\",\n    \"sectionTitle\": \"History\"\n}"
+							"raw": "{\n    \"topic\": \"Artificial intelligence\",\n    \"sectionTitle\": \"History\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/wikipedia/section-content",
