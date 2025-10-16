@@ -82,15 +82,43 @@ To verify the remote server is running:
 curl https://wikipediamcpserver.onrender.com/api/wikipedia/health
 ```
 
-##### Option 2: Deploy Your Own Instance
+##### Option 2: Deploy Your Own Instance on Render
 
-You can deploy your own instance to any cloud platform that supports .NET applications:
+You can deploy your own instance to Render by:
 
-- **Render**: Connect your GitHub repository and deploy automatically
-- **Azure App Service**: Use the Azure CLI or portal
-- **AWS Elastic Beanstalk**: Deploy .NET applications
-- **Railway**: Simple git-based deployment
-- **Google Cloud Run**: Containerized .NET deployment
+1. **Fork this repository** to your GitHub account
+2. **Create a new Web Service** on [Render](https://render.com)
+3. **Connect your GitHub repository** to Render
+4. **Create a new Web Service** from your repository
+5. Render will **automatically detect** the `render.yaml` configuration
+6. **Deploy** with one click!
+
+**Detailed Configuration:**
+
+**Automatic Setup (Recommended):**
+- Uses `render.yaml` for complete deployment configuration
+- Automatic deployments on git push
+- Build Command: `dotnet restore src/WikipediaMcpServer/WikipediaMcpServer.csproj && dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish`
+- Start Command: `dotnet ./publish/WikipediaMcpServer.dll`
+- Environment: Set `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
+
+**Manual Configuration (if not using render.yaml):**
+- Build Command: `dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o out`
+- Start Command: `dotnet out/WikipediaMcpServer.dll`
+- Environment: Select ".NET"
+- Add environment variables in Render dashboard
+
+**Custom Domain:**
+- Add your domain in Render dashboard
+- Update DNS to point to Render
+
+**Cost & Scaling:**
+- Free Tier: ✅ 750 hours/month
+- Paid Plans Start: $7/month for always-on services
+- Horizontal scaling on paid plans
+- Automatic sleep/wake on free tier
+
+Your deployed server will be available at `https://your-app-name.onrender.com`
 
 #### Remote MCP Client Configuration
 
@@ -354,6 +382,122 @@ You can use these tools through natural language requests in supported clients:
 - "What are the sections available for the Python programming article on Wikipedia?"
 - "Get the content of the History section from the Artificial Intelligence Wikipedia page"
 
+## Remote Deployment Testing
+
+### 🧪 **Comprehensive Testing Guide**
+
+After deploying to Render, use these testing methods to verify your deployment:
+
+#### **Quick Health Check**
+
+```bash
+# Test deployment health
+curl https://your-deployment-url.onrender.com/api/wikipedia/health
+
+# Expected response:
+{"status":"healthy","service":"Wikipedia MCP Server","timestamp":"..."}
+```
+
+#### **Postman Collection Testing (Recommended)**
+
+This repository includes a **dedicated remote testing collection** specifically designed for deployment validation:
+
+**📦 Remote Testing Files:**
+- **`WikipediaMcpServer-Remote-Collection.json`** - Complete remote deployment test suite (12 tests)
+- **`WikipediaMcpServer-Remote-Environment.postman_environment.json`** - Pre-configured environment variables
+
+**🚀 Quick Setup:**
+
+1. **Import the Remote Collections**:
+   ```bash
+   # In Postman:
+   # 1. File → Import
+   # 2. Select both files from the repository root
+   # 3. WikipediaMcpServer-Remote-Collection.json (test suite)
+   # 4. WikipediaMcpServer-Remote-Environment.postman_environment.json (environment)
+   ```
+
+2. **Configure Your Deployment URL**:
+   - In Postman, select "Wikipedia MCP Server Remote Environment"
+   - Update `base_url` variable to your actual deployment URL
+   - Example: `https://your-app-name.onrender.com`
+   - Save the environment
+
+3. **Run the Complete Test Suite**:
+   - Click "Run Collection" in Postman
+   - Select "Wikipedia MCP Server - Remote Deployment Testing"
+   - Choose "Wikipedia MCP Server Remote Environment"
+   - Run all 12 tests
+
+**✅ Expected Results:**
+- All 12 tests should pass
+- Response times should be < 10 seconds
+- All endpoints return proper JSON
+- Environment detection shows your platform (Render)
+- Security headers are validated
+
+#### **Performance Benchmarks**
+
+| Test Type | Expected Time | Status |
+|-----------|---------------|---------|
+| Health Check | < 2 seconds | ✅ Pass |
+| Search API | < 8 seconds | ✅ Pass |
+| Content API | < 10 seconds | ✅ Pass |
+| MCP Protocol | < 5 seconds | ✅ Pass |
+
+#### **Deployment Troubleshooting**
+
+**Build Failures:**
+- Ensure .NET 8 SDK is available in build environment
+- Check that all project files are included in git
+- Verify `render.yaml` is in repository root
+
+**Runtime Errors:**
+- Check deployment logs in Render dashboard
+- Verify environment variables: `ASPNETCORE_ENVIRONMENT=Production`
+- Ensure port binding: `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
+
+**Slow Response Times:**
+- Cold start issue on free tier - upgrade to paid tier
+- Monitor resource usage in Render dashboard
+- Implement ping service to keep instance warm
+
+**Security Issues:**
+- Verify CORS configuration for your domain
+- Check security headers are present
+- Ensure HTTPS is enforced
+
+#### **Monitoring & Alerts**
+
+**Health Monitoring:**
+- Endpoint: `/api/wikipedia/health`
+- Frequency: Every 5 minutes
+- Expected: `200 OK` with healthy status
+
+**Performance Monitoring:**
+- Track API response times
+- Monitor error rates (4xx/5xx)
+- Set up uptime monitoring
+
+**Render Dashboard:**
+- Built-in metrics and logging
+- Resource usage monitoring
+- Auto-scaling configuration
+
+#### **Deployment Verification Checklist**
+
+- [ ] Health check endpoint responds with 200 OK
+- [ ] All API endpoints return valid JSON
+- [ ] **Remote Postman collection tests pass** (12/12 tests)
+- [ ] MCP protocol initialization succeeds
+- [ ] Security headers are present (HSTS, X-Frame-Options)
+- [ ] HTTPS is enforced
+- [ ] Environment shows "Production"
+- [ ] Response times are acceptable (< 10s)
+- [ ] Error handling works properly
+- [ ] CORS is configured correctly
+- [ ] Auto-deploy from GitHub works
+
 ## Testing
 
 This project includes a comprehensive test suite with **182 total tests** across three categories, ensuring 100% reliability and production readiness.
@@ -497,13 +641,18 @@ dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj
 
 #### Option A: Using Postman (Recommended)
 
-A comprehensive Postman collection is provided for testing all endpoints:
+**For Local Development Testing:**
 
-1. **Import the Postman collection**: `WikipediaMcpServer-Postman-Collection.json`
-2. **Import the environment**: `WikipediaMcpServer-Environment.postman_environment.json`
-3. **Run the collection** to test all endpoints with automated assertions
+A comprehensive Postman collection is provided for testing your local server:
 
-The collection includes:
+1. **Import the LOCAL collection**: `WikipediaMcpServer-Postman-Collection.json`
+2. **Import the LOCAL environment**: `WikipediaMcpServer-Environment.postman_environment.json`
+3. **Ensure your local server is running** on `http://localhost:5070`
+4. **Run the collection** to test all endpoints with automated assertions
+
+> **💡 Note**: For remote deployment testing, use the **Remote Collection** described in the "Remote Deployment Testing" section above.
+
+The local collection includes:
 
 - ✅ Health check tests
 - ✅ Search functionality tests (with exact Wikipedia page titles)
@@ -670,8 +819,10 @@ WikipediaMcpServer/
 ├── test-json-rpc.sh                                    # Automated MCP protocol testing script
 ├── mcp.json                                            # Example MCP configuration (reference only)
 ├── WikipediaMcpServer.sln                             # Solution file
-├── WikipediaMcpServer-Postman-Collection.json         # Postman test collection
-└── WikipediaMcpServer-Environment.postman_environment.json  # Postman environment
+├── WikipediaMcpServer-Postman-Collection.json         # Local development Postman collection
+├── WikipediaMcpServer-Environment.postman_environment.json  # Local development environment
+├── WikipediaMcpServer-Remote-Collection.json          # Remote deployment testing collection  
+└── WikipediaMcpServer-Remote-Environment.postman_environment.json  # Remote deployment environment
 ```
 
 ## Configuration Files
@@ -684,10 +835,13 @@ The application uses several configuration approaches:
 
 ## Testing Files
 
-For HTTP API testing:
+**For Local Development Testing:**
+- `WikipediaMcpServer-Postman-Collection.json` - Local development Postman collection
+- `WikipediaMcpServer-Environment.postman_environment.json` - Local environment variables
 
-- `WikipediaMcpServer-Postman-Collection.json` - Comprehensive Postman test collection
-- `WikipediaMcpServer-Environment.postman_environment.json` - Postman environment variables
+**For Remote Deployment Testing:**
+- `WikipediaMcpServer-Remote-Collection.json` - Remote deployment test collection
+- `WikipediaMcpServer-Remote-Environment.postman_environment.json` - Remote environment variables
 
 ## Releases
 

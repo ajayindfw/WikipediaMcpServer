@@ -466,7 +466,6 @@ dist/
 .dockerignore
 
 # Platform-specific deployment files
-.railway/
 .render/
 
 # Log files

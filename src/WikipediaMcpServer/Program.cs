@@ -33,15 +33,18 @@ else
     var builder = WebApplication.CreateBuilder(args);
 
     // Configure Kestrel for production deployment
-    builder.WebHost.ConfigureKestrel(options =>
+    if (builder.Environment.IsProduction())
     {
-        options.AddServerHeader = false; // Security: Remove server header
-        
-        // For cloud deployments (Render, Railway, etc.), only listen on HTTP
-        // HTTPS termination is handled by the platform's load balancer
-        var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-        options.ListenAnyIP(int.Parse(port));
-    });
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.AddServerHeader = false; // Security: Remove server header
+            
+            // For cloud deployments (Render, etc.), only listen on HTTP
+            // HTTPS termination is handled by the platform's load balancer
+            var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+            options.ListenAnyIP(int.Parse(port));
+        });
+    }
 
     // Add services to the container.
     builder.Services.AddControllers();
@@ -80,7 +83,7 @@ else
         });
     });
 
-    // Configure forwarded headers for reverse proxy (Render, Railway, etc.)
+    // Configure forwarded headers for reverse proxy (Render, etc.)
     if (builder.Environment.IsProduction())
     {
         builder.Services.Configure<ForwardedHeadersOptions>(options =>

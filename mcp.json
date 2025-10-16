@@ -1,17 +1,18 @@
 {
   "mcpServers": {
-    "wikipedia-dotnet": {
+    "wikipedia-local": {
       "command": "dotnet",
       "args": [
         "run",
         "--project",
-        "/full/path/to/your/WikipediaMcpServer/src/WikipediaMcpServer/WikipediaMcpServer.csproj",
+        "src/WikipediaMcpServer/WikipediaMcpServer.csproj",
         "--",
         "--mcp"
       ],
       "env": {
-        "DOTNET_ENVIRONMENT": "Production"
-      }
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "description": "Local Wikipedia MCP Server for development"
     }
   }
 }
