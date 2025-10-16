@@ -499,6 +499,8 @@
 								"exec": [
 									"pm.test(\"CORS headers present\", function () {",
 									"    pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.exist;",
+									"    pm.expect(pm.response.headers.get('Access-Control-Allow-Methods')).to.exist;",
+									"    pm.expect(pm.response.headers.get('Access-Control-Allow-Headers')).to.exist;",
 									"});",
 									"",
 									"pm.test(\"Security headers present\", function () {",
@@ -520,6 +522,10 @@
 							{
 								"key": "Access-Control-Request-Method",
 								"value": "POST"
+							},
+							{
+								"key": "Access-Control-Request-Headers",
+								"value": "Content-Type"
 							}
 						],
 						"url": {
