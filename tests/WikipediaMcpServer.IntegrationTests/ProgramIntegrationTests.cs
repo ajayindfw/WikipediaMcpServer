@@ -28,7 +28,14 @@ public class ProgramIntegrationTests : IClassFixture<WebApplicationFactory<Progr
         response.IsSuccessStatusCode.Should().BeTrue();
         
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Be("Wikipedia MCP Server is running");
+        
+        // Parse and validate JSON response
+        var json = JsonDocument.Parse(content);
+        var root = json.RootElement;
+        
+        root.GetProperty("name").GetString().Should().Be("Wikipedia MCP Server");
+        root.GetProperty("status").GetString().Should().Be("running");
+        root.GetProperty("endpoints").Should().BeOfType<JsonElement>();
     }
 
     [Fact]

@@ -237,7 +237,8 @@ public class WikipediaControllerComprehensiveTests : IClassFixture<WebApplicatio
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("Wikipedia MCP Server is running");
+        content.Should().Contain("Wikipedia MCP Server");
+        content.Should().Contain("running");
     }
 
     [Fact]

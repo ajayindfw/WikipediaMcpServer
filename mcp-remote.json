@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "wikipedia-remote": {
+      "transport": {
+        "type": "http",
+        "url": "https://wikipediamcpserver.onrender.com/api/wikipedia"
+      },
+      "description": "Wikipedia MCP Server deployed on Render - provides search, sections, and content retrieval",
+      "capabilities": {
+        "tools": {
+          "wikipedia_search": {
+            "description": "Search Wikipedia articles"
+          },
+          "wikipedia_sections": {
+            "description": "Get sections of a Wikipedia page"
+          },
+          "wikipedia_section_content": {
+            "description": "Get content of a specific section"
+          }
+        }
+      },
+      "env": {
+        "MCP_MODE": "false"
+      }
+    }
+  }
+}

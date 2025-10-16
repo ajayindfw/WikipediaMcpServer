@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "wikipedia-local": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "src/WikipediaMcpServer/WikipediaMcpServer.csproj",
+        "--",
+        "--mcp"
+      ],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "description": "Local Wikipedia MCP Server for development"
+    },
+    "wikipedia-remote": {
+      "transport": {
+        "type": "http",
+        "url": "https://your-render-url.onrender.com/api/wikipedia"
+      },
+      "description": "Remote Wikipedia MCP Server on Render for production use",
+      "capabilities": {
+        "tools": {
+          "wikipedia_search": {
+            "description": "Search Wikipedia articles with query and optional limit"
+          },
+          "wikipedia_sections": {
+            "description": "Get list of sections for a Wikipedia page"
+          },
+          "wikipedia_section_content": {
+            "description": "Get content of a specific section from a Wikipedia page"
+          }
+        }
+      },
+      "timeout": 30000,
+      "retries": 3
+    }
+  }
+}

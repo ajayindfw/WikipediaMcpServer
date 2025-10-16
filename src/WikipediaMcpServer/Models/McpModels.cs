@@ -33,6 +33,18 @@ public class McpResponse
     public McpError? Error { get; set; }
 }
 
+public class McpErrorResponse
+{
+    [JsonPropertyName("jsonrpc")]
+    public string JsonRpc { get; set; } = "2.0";
+    
+    [JsonPropertyName("id")]
+    public object? Id { get; set; }
+    
+    [JsonPropertyName("error")]
+    public McpError Error { get; set; } = new();
+}
+
 public class McpError
 {
     [JsonPropertyName("code")]
