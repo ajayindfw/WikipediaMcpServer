@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Cors;
 using WikipediaMcpServer.Models;
 using WikipediaMcpServer.Services;
 using System.ComponentModel.DataAnnotations;
@@ -7,6 +8,7 @@ namespace WikipediaMcpServer.Controllers;
 
 [ApiController]
 [Route("api/wikipedia")]
+[EnableCors]
 public class WikipediaController : ControllerBase
 {
     private readonly IWikipediaService _wikipediaService;
