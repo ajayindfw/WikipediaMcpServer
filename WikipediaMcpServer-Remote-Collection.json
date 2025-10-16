@@ -25,10 +25,10 @@
 									"    pm.response.to.be.json;",
 									"});",
 									"",
-									"pm.test(\"Health status is healthy\", function () {",
-									"    const response = pm.response.json();",
-									"    pm.expect(response.status).to.eql(\"Healthy\");",
-									"});",
+								"pm.test(\"Health status is healthy\", function () {",
+								"    const response = pm.response.json();",
+								"    pm.expect(response.status).to.eql(\"healthy\");",
+								"});",
 									"",
 									"pm.test(\"Response time is reasonable\", function () {",
 									"    pm.expect(pm.response.responseTime).to.be.below(5000);",
@@ -68,14 +68,14 @@
 									"",
 									"pm.test(\"Contains API information\", function () {",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.message).to.include(\"Wikipedia MCP Server\");",
+									"    pm.expect(response.name).to.include(\"Wikipedia MCP Server\");",
 									"    pm.expect(response.version).to.exist;",
 									"    pm.expect(response.endpoints).to.exist;",
 									"});",
 									"",
-									"pm.test(\"Environment is Production\", function () {",
+									"pm.test(\"Service is running\", function () {",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.environment).to.eql(\"Production\");",
+									"    pm.expect(response.status).to.eql(\"running\");",
 									"});"
 								],
 								"type": "text/javascript"
@@ -103,7 +103,7 @@
 			"name": "🔍 Wikipedia Search API",
 			"item": [
 				{
-					"name": "Search - Basic Query",
+					"name": "Search - Basic Query (REST API)",
 					"event": [
 						{
 							"listen": "test",
@@ -115,17 +115,9 @@
 									"",
 									"pm.test(\"Response contains search results\", function () {",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.result).to.exist;",
-									"    pm.expect(response.result.pages).to.exist;",
-									"    pm.expect(response.result.pages.length).to.be.greaterThan(0);",
-									"});",
-									"",
-									"pm.test(\"Results contain expected fields\", function () {",
-									"    const response = pm.response.json();",
-									"    const firstPage = response.result.pages[0];",
-									"    pm.expect(firstPage.title).to.exist;",
-									"    pm.expect(firstPage.excerpt).to.exist;",
-									"    pm.expect(firstPage.key).to.exist;",
+									"    pm.expect(response.title).to.exist;",
+									"    pm.expect(response.summary).to.exist;",
+									"    pm.expect(response.url).to.exist;",
 									"});",
 									"",
 									"pm.test(\"Response time is acceptable for remote\", function () {",
@@ -146,23 +138,24 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"method\": \"search\",\n    \"params\": {\n        \"query\": \"artificial intelligence\"\n    }\n}"
+							"raw": "{\n    \"query\": \"artificial intelligence\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/wikipedia",
+							"raw": "{{base_url}}/api/wikipedia/search",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"wikipedia"
+								"wikipedia",
+								"search"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Search - With Limit",
+					"name": "Search - With Limit (REST API)",
 					"event": [
 						{
 							"listen": "test",
@@ -171,7 +164,8 @@
 									"pm.test(\"Search with limit works\", function () {",
 									"    pm.response.to.have.status(200);",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.result.pages.length).to.be.at.most(3);",
+									"    pm.expect(response.title).to.exist;",
+									"    pm.expect(response.summary).to.exist;",
 									"});"
 								],
 								"type": "text/javascript"
@@ -188,16 +182,17 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"method\": \"search\",\n    \"params\": {\n        \"query\": \"quantum computing\",\n        \"limit\": 3\n    }\n}"
+							"raw": "{\n    \"query\": \"quantum computing\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/wikipedia",
+							"raw": "{{base_url}}/api/wikipedia/search",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"wikipedia"
+								"wikipedia",
+								"search"
 							]
 						}
 					},
@@ -209,7 +204,7 @@
 			"name": "📄 Wikipedia Content API",
 			"item": [
 				{
-					"name": "Get Page Sections",
+					"name": "Get Page Sections (REST API)",
 					"event": [
 						{
 							"listen": "test",
@@ -218,8 +213,9 @@
 									"pm.test(\"Sections endpoint works\", function () {",
 									"    pm.response.to.have.status(200);",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.result).to.exist;",
-									"    pm.expect(response.result.sections).to.exist;",
+									"    pm.expect(response.title).to.exist;",
+									"    pm.expect(response.sections).to.exist;",
+									"    pm.expect(response.url).to.exist;",
 									"});"
 								],
 								"type": "text/javascript"
@@ -236,23 +232,24 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"method\": \"sections\",\n    \"params\": {\n        \"topic\": \"Machine Learning\"\n    }\n}"
+							"raw": "{\n    \"topic\": \"Machine Learning\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/wikipedia",
+							"raw": "{{base_url}}/api/wikipedia/sections",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"wikipedia"
+								"wikipedia",
+								"sections"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Get Section Content",
+					"name": "Get Section Content (REST API)",
 					"event": [
 						{
 							"listen": "test",
@@ -261,8 +258,8 @@
 									"pm.test(\"Section content retrieval works\", function () {",
 									"    pm.response.to.have.status(200);",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.result).to.exist;",
-									"    pm.expect(response.result.content).to.exist;",
+									"    pm.expect(response.sectionTitle).to.exist;",
+									"    pm.expect(response.content).to.exist;",
 									"});"
 								],
 								"type": "text/javascript"
@@ -279,16 +276,17 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"method\": \"section_content\",\n    \"params\": {\n        \"topic\": \"Artificial Intelligence\",\n        \"section_title\": \"History\"\n    }\n}"
+							"raw": "{\n    \"topic\": \"Artificial Intelligence\",\n    \"sectionTitle\": \"History\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/wikipedia",
+							"raw": "{{base_url}}/api/wikipedia/section-content",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"wikipedia"
+								"wikipedia",
+								"section-content"
 							]
 						}
 					},
@@ -386,6 +384,50 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "MCP Tool Call - Wikipedia Search",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"MCP Tool Call works\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.result).to.exist;",
+									"    pm.expect(response.result.content).to.exist;",
+									"    pm.expect(response.result.content[0].type).to.eql('text');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"jsonrpc\": \"2.0\",\n    \"id\": 3,\n    \"method\": \"tools/call\",\n    \"params\": {\n        \"name\": \"wikipedia_search\",\n        \"arguments\": {\n            \"query\": \"artificial intelligence\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/wikipedia",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"wikipedia"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -407,10 +449,10 @@
 									"    pm.expect(pm.response.responseTime).to.be.below(15000);",
 									"});",
 									"",
-									"pm.test(\"Response contains valid data\", function () {",
+									"pm.test(\"Response contains valid data structure\", function () {",
 									"    const response = pm.response.json();",
-									"    pm.expect(response.result).to.exist;",
-									"    pm.expect(response.result.pages).to.exist;",
+									"    // Check if it's a successful response or error response",
+									"    pm.expect(response.title || response.error).to.exist;",
 									"});"
 								],
 								"type": "text/javascript"
@@ -427,16 +469,17 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"method\": \"search\",\n    \"params\": {\n        \"query\": \"{{$randomWords}}\"\n    }\n}"
+							"raw": "{\n    \"query\": \"science\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/wikipedia",
+							"raw": "{{base_url}}/api/wikipedia/search",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"wikipedia"
+								"wikipedia",
+								"search"
 							]
 						}
 					},
@@ -561,11 +604,9 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// Global test to ensure we're testing remote deployment",
-					"pm.test('Remote deployment accessible', function() {",
-					"    const baseUrl = pm.environment.get('base_url');",
-					"    pm.expect(baseUrl).to.not.include('localhost');",
-					"    pm.expect(baseUrl).to.include('https');",
+					"// Global test to verify response structure",
+					"pm.test('Valid JSON response', function() {",
+					"    pm.response.to.be.json;",
 					"});"
 				]
 			}

@@ -4,8 +4,8 @@
 	"values": [
 		{
 			"key": "base_url",
-			"value": "https://your-service-name.onrender.com",
-			"description": "Replace with your actual Render deployment URL",
+			"value": "https://wikipediamcpserver.onrender.com",
+			"description": "Wikipedia MCP Server on Render deployment",
 			"enabled": true
 		},
 		{

@@ -65,6 +65,166 @@ dotnet run
 
 The server will start on `http://localhost:5070` by default.
 
+### Running as Remote MCP Server
+
+The Wikipedia MCP Server can be deployed and accessed remotely, allowing multiple clients to use the service without running it locally. This is particularly useful for teams or when you want to avoid local resource usage.
+
+#### Remote Deployment Options
+
+##### Option 1: Render (Recommended)
+
+The server is already deployed and available at:
+**https://wikipediamcpserver.onrender.com**
+
+To verify the remote server is running:
+
+```bash
+curl https://wikipediamcpserver.onrender.com/api/wikipedia/health
+```
+
+##### Option 2: Deploy Your Own Instance
+
+You can deploy your own instance to any cloud platform that supports .NET applications:
+
+- **Render**: Connect your GitHub repository and deploy automatically
+- **Azure App Service**: Use the Azure CLI or portal
+- **AWS Elastic Beanstalk**: Deploy .NET applications
+- **Railway**: Simple git-based deployment
+- **Google Cloud Run**: Containerized .NET deployment
+
+#### Remote MCP Client Configuration
+
+Since most MCP clients (VS Code, Claude Desktop) expect stdio communication, you'll need to use a bridge script to convert HTTP requests to the proper format.
+
+##### Step 1: Get the Bridge Script
+
+Download or copy the `mcp-http-bridge.js` file from this repository. This Node.js script converts MCP stdio communication to HTTP requests.
+
+##### Step 2: Configure Your MCP Client
+
+**For VS Code MCP Extension:**
+
+Add this to your `mcp.json` file (`~/Library/Application Support/Code/User/mcp.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "wikipedia-remote": {
+      "command": "node",
+      "args": [
+        "/path/to/your/mcp-http-bridge.js"
+      ],
+      "description": "Remote Wikipedia MCP Server on Render",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
+```
+
+**For Claude Desktop:**
+
+Add this to your Claude Desktop config file (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "wikipedia-remote": {
+      "command": "node",
+      "args": [
+        "/path/to/your/mcp-http-bridge.js"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
+```
+
+##### Step 3: Test the Remote Connection
+
+Test the bridge script manually:
+
+```bash
+# Test the remote MCP server through the bridge
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}' | node mcp-http-bridge.js
+```
+
+You should see a response like:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "serverInfo": {
+      "name": "wikipedia-mcp-server",
+      "version": "6.0.0"
+    }
+  }
+}
+```
+
+#### Remote Server Benefits
+
+✅ **No Local Resources** - Runs on remote infrastructure  
+✅ **Always Available** - 24/7 uptime on cloud platforms  
+✅ **Shared Access** - Multiple team members can use the same instance  
+✅ **Automatic Updates** - Deploy updates without client configuration changes  
+✅ **Scalable** - Cloud platforms handle traffic scaling automatically  
+✅ **Reliable** - Professional hosting with monitoring and backups  
+
+#### HTTP Bridge Script Details
+
+The `mcp-http-bridge.js` script:
+
+- Reads MCP JSON-RPC messages from stdin
+- Converts them to HTTP POST requests
+- Sends requests to the remote server
+- Returns responses in proper MCP format
+- Handles errors and timeouts gracefully
+- Provides debug logging to stderr
+
+#### Alternative: Direct HTTP Testing
+
+You can also test the remote server directly with HTTP requests:
+
+```bash
+# Test remote server directly (bypasses MCP protocol)
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"wikipedia_search","arguments":{"query":"artificial intelligence"}}}' \
+  https://wikipediamcpserver.onrender.com/api/wikipedia
+```
+
+#### Troubleshooting Remote Connection
+
+**Common Issues:**
+
+1. **Bridge script not found**: Ensure the path to `mcp-http-bridge.js` is correct and absolute
+2. **Node.js not available**: Make sure Node.js is installed (`node --version`)
+3. **Network issues**: Check if you can reach the remote server (`curl https://wikipediamcpserver.onrender.com/api/wikipedia/health`)
+4. **Permission issues**: Ensure the bridge script is readable (`chmod +x mcp-http-bridge.js`)
+
+**Debug Commands:**
+
+```bash
+# Test remote server health
+curl https://wikipediamcpserver.onrender.com/api/wikipedia/health
+
+# Test bridge script with debug output
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}' | node mcp-http-bridge.js
+
+# Check Node.js version
+node --version
+```
+
 #### API Endpoints
 
 ##### Search Wikipedia
