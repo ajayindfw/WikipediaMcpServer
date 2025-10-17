@@ -483,3 +483,9 @@ logs/
 # *.pem
 # *.crt
 # *.key
+
+# Debug and test output files
+debug*.txt
+debug*.json
+http_output.txt
+*_output.txt

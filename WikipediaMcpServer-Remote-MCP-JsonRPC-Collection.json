@@ -1,0 +1,567 @@
+{
+	"info": {
+		"_postman_id": "wikipedia-mcp-server-remote-jsonrpc-collection",
+		"name": "Wikipedia MCP Server - Remote JSON-RPC 2.0 Testing",
+		"description": "Remote deployment testing collection for Wikipedia MCP Server using JSON-RPC 2.0 protocol - Compatible with Microsoft ModelContextProtocol SDK v0.4.0-preview.2. Designed for cloud deployments (Render, etc.).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "wikipedia-mcp-remote-jsonrpc"
+	},
+	"item": [
+		{
+			"name": "🚀 Deployment Health Checks",
+			"item": [
+				{
+					"name": "Health Check - Basic",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Health check returns 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is JSON\", function () {",
+									"    pm.response.to.be.json;",
+									"});",
+									"",
+									"pm.test(\"Health status is healthy\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.status).to.eql('healthy');",
+									"});",
+									"",
+									"pm.test(\"Response time is reasonable for remote\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(10000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Health check endpoint for remote deployment verification"
+					},
+					"response": []
+				},
+				{
+					"name": "Server Info Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Server info returns 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Contains server information\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.name).to.include('Wikipedia MCP Server');",
+									"    pm.expect(response.version).to.exist;",
+									"    pm.expect(response.framework).to.include('Microsoft ModelContextProtocol');",
+									"});",
+									"",
+									"pm.test(\"Service is running\", function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.status).to.eql('running');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/info",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"info"
+							]
+						},
+						"description": "Server info endpoint showing deployment status and MCP framework version"
+					},
+					"response": []
+				}
+			],
+			"description": "Remote deployment health and status verification"
+		},
+		{
+			"name": "🧪 MCP Protocol Tests",
+			"item": [
+				{
+					"name": "MCP Initialize",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is Server-Sent Events\", function () {",
+									"    var contentType = pm.response.headers.get('Content-Type');",
+									"    pm.expect(contentType).to.include('text/event-stream');",
+									"});",
+									"",
+									"pm.test(\"SSE contains JSON-RPC response\", function () {",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('event: message');",
+									"    pm.expect(responseText).to.include('data: {');",
+									"    pm.expect(responseText).to.include('\"jsonrpc\":\"2.0\"');",
+									"});",
+									"",
+									"pm.test(\"Response contains MCP capabilities\", function () {",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('\"result\"');",
+									"    pm.expect(responseText).to.include('\"capabilities\"');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman Remote Test\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "MCP protocol initialization handshake for remote deployment"
+					},
+					"response": []
+				},
+				{
+					"name": "MCP List Tools",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response contains tools list\", function () {",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('\"tools\"');",
+									"    pm.expect(responseText).to.include('wikipedia_search');",
+									"    pm.expect(responseText).to.include('wikipedia_sections');",
+									"    pm.expect(responseText).to.include('wikipedia_section_content');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "List all available MCP tools on remote deployment"
+					},
+					"response": []
+				}
+			],
+			"description": "MCP protocol compliance testing for remote deployment"
+		},
+		{
+			"name": "🔍 Wikipedia Tools - Remote Testing",
+			"item": [
+				{
+					"name": "Wikipedia Search - Remote",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Search tool works on remote deployment\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('Wikipedia search result');",
+									"    pm.expect(responseText).to.include('wikipedia.org');",
+									"});",
+									"",
+									"pm.test(\"Response time acceptable for remote\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(15000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"artificial intelligence\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Test Wikipedia search tool on remote deployment"
+					},
+					"response": []
+				},
+				{
+					"name": "Wikipedia Sections - Remote",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Sections tool works on remote deployment\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('sections');",
+									"    pm.expect(responseText).to.include('Machine learning');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_sections\",\n    \"arguments\": {\n      \"topic\": \"Machine learning\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Test Wikipedia sections tool on remote deployment"
+					},
+					"response": []
+				},
+				{
+					"name": "Wikipedia Section Content - Remote",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Section content tool works on remote deployment\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('Content from section');",
+									"    pm.expect(responseText).to.include('Overview');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_section_content\",\n    \"arguments\": {\n      \"topic\": \"Artificial intelligence\",\n      \"sectionTitle\": \"Overview\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Test Wikipedia section content tool on remote deployment"
+					},
+					"response": []
+				}
+			],
+			"description": "Wikipedia tools functionality testing on remote deployment"
+		},
+		{
+			"name": "⚡ Performance & Load Tests",
+			"item": [
+				{
+					"name": "Concurrent Search Test - Remote",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Concurrent request handled successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response time acceptable for remote deployment\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(20000);",
+									"});",
+									"",
+									"pm.test(\"Response contains valid Wikipedia data\", function () {",
+									"    var responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('Wikipedia search result');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"quantum computing\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Test concurrent request handling on remote deployment (use with Postman Runner for load testing)"
+					},
+					"response": []
+				}
+			],
+			"description": "Performance and load testing for remote deployment"
+		},
+		{
+			"name": "🔒 Security & Production Tests",
+			"item": [
+				{
+					"name": "CORS Headers Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"CORS preflight handled correctly\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"",
+									"pm.test(\"CORS Access-Control-Allow-Origin header present\", function () {",
+									"    const allowOrigin = pm.response.headers.get('access-control-allow-origin');",
+									"    pm.expect(allowOrigin).to.exist;",
+									"    pm.expect(allowOrigin).to.eql('*');",
+									"});",
+									"",
+									"pm.test(\"CORS methods allowed\", function () {",
+									"    const allowMethods = pm.response.headers.get('access-control-allow-methods');",
+									"    pm.expect(allowMethods).to.exist;",
+									"    pm.expect(allowMethods).to.include('POST');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "OPTIONS",
+						"header": [
+							{
+								"key": "Origin",
+								"value": "https://example.com"
+							},
+							{
+								"key": "Access-Control-Request-Method",
+								"value": "POST"
+							},
+							{
+								"key": "Access-Control-Request-Headers",
+								"value": "Content-Type"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Test CORS preflight handling for remote deployment"
+					},
+					"response": []
+				},
+				{
+					"name": "Security Headers Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Security headers present\", function () {",
+									"    pm.expect(pm.response.headers.get('x-content-type-options')).to.eql('nosniff');",
+									"    pm.expect(pm.response.headers.get('x-frame-options')).to.eql('DENY');",
+									"});",
+									"",
+									"pm.test(\"HTTPS enforced in production\", function () {",
+									"    const baseUrl = pm.environment.get('base_url');",
+									"    if (baseUrl && !baseUrl.includes('localhost')) {",
+									"        pm.expect(baseUrl).to.include('https');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verify security headers and HTTPS enforcement on remote deployment"
+					},
+					"response": []
+				}
+			],
+			"description": "Security and production readiness testing for remote deployment"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-detect environment based on URL",
+					"const baseUrl = pm.environment.get('base_url');",
+					"if (baseUrl) {",
+					"    if (baseUrl.includes('render.com') || baseUrl.includes('onrender.com')) {",
+					"        console.log('🚀 Testing on Render deployment');",
+					"    } else if (baseUrl.includes('localhost')) {",
+					"        console.log('🏠 Testing local deployment (use local collection instead)');",
+					"    } else {",
+					"        console.log('☁️ Testing cloud deployment');",
+					"    }",
+					"    console.log('🔗 Base URL:', baseUrl);",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test for JSON-RPC 2.0 compliance (skip for OPTIONS requests)",
+					"if (pm.request.method !== 'OPTIONS' && pm.request.url.path.join('/') === '') {",
+					"    pm.test('Response follows JSON-RPC 2.0 via SSE format', function() {",
+					"        var responseText = pm.response.text();",
+					"        if (responseText.includes('event: message')) {",
+					"            pm.expect(responseText).to.include('\"jsonrpc\":\"2.0\"');",
+					"        }",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://wikipediamcpserver.onrender.com",
+			"description": "Base URL for the remote Wikipedia MCP Server deployment"
+		},
+		{
+			"key": "timestamp",
+			"value": "{{$timestamp}}",
+			"description": "Current timestamp for testing"
+		},
+		{
+			"key": "randomQuery",
+			"value": "{{$randomWords}}",
+			"description": "Random words for testing"
+		}
+	]
+}

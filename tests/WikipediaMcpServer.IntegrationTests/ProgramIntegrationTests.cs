@@ -7,11 +7,11 @@ using System.Text.Json;
 
 namespace WikipediaMcpServer.IntegrationTests;
 
-public class ProgramIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class ProgramIntegrationTests : IClassFixture<TestWebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestWebApplicationFactory<Program> _factory;
 
-    public ProgramIntegrationTests(WebApplicationFactory<Program> factory)
+    public ProgramIntegrationTests(TestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -21,7 +21,7 @@ public class ProgramIntegrationTests : IClassFixture<WebApplicationFactory<Progr
     {
         // Act
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/");
+        var response = await client.GetAsync("/info");
 
         // Assert
         response.Should().NotBeNull();
@@ -75,12 +75,12 @@ public class ProgramIntegrationTests : IClassFixture<WebApplicationFactory<Progr
     {
         // Act
         var client = _factory.CreateClient();
-        var response = await client.GetAsync("/api/wikipedia/search?query=test");
+        var response = await client.GetAsync("/info");
 
-        // Assert - Should get a response (may be 500 due to mocked HttpClient, but endpoint should exist)
+        // Assert - Should get a response from the info endpoint
         response.Should().NotBeNull();
-        // Note: In integration test, we expect this to work or at least not return 404
         response.StatusCode.Should().NotBe(System.Net.HttpStatusCode.NotFound);
+        response.IsSuccessStatusCode.Should().BeTrue();
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class ProgramIntegrationTests : IClassFixture<WebApplicationFactory<Progr
         var client = _factory.CreateClient();
         
         // Create a request with Origin header to trigger CORS
-        var request = new HttpRequestMessage(HttpMethod.Get, "/");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/info");
         request.Headers.Add("Origin", "https://example.com");
         
         var response = await client.SendAsync(request);

@@ -2,26 +2,58 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
+using System.Text;
 using WikipediaMcpServer.Services;
+using WikipediaMcpServer.Models;
 
 namespace WikipediaMcpServer.IntegrationTests;
 
-public class WikipediaControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class WikipediaControllerIntegrationTests : IClassFixture<TestWebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestWebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
+    private readonly JsonSerializerOptions _jsonOptions;
 
-    public WikipediaControllerIntegrationTests(WebApplicationFactory<Program> factory)
+    public WikipediaControllerIntegrationTests(TestWebApplicationFactory<Program> factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
+        
+        // Configure client for MCP protocol requirements
+        _client.DefaultRequestHeaders.Accept.Clear();
+        _client.DefaultRequestHeaders.Accept.Add(
+            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        _client.DefaultRequestHeaders.Accept.Add(
+            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/event-stream"));
+            
+        _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false
+        };
+    }
+
+    private static string ExtractJsonFromSseResponse(string sseResponse)
+    {
+        // Parse Server-Sent Events format
+        var lines = sseResponse.Split('\n');
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("data: "))
+            {
+                return line.Substring(6); // Remove "data: " prefix
+            }
+        }
+        
+        // If it's already JSON, return as-is
+        return sseResponse.Trim();
     }
 
     [Fact]
-    public async Task GetSearch_WithValidQuery_ShouldReturnSuccessResponse()
+    public async Task Health_ShouldReturnHealthyStatus()
     {
         // Act
-        var response = await _client.GetAsync("/api/wikipedia/search?query=artificial intelligence");
+        var response = await _client.GetAsync("/health");
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
@@ -31,78 +63,112 @@ public class WikipediaControllerIntegrationTests : IClassFixture<WebApplicationF
         // Verify it's valid JSON
         var jsonDoc = JsonDocument.Parse(content);
         jsonDoc.Should().NotBeNull();
+        jsonDoc.RootElement.GetProperty("status").GetString().Should().Be("healthy");
     }
 
     [Fact]
-    public async Task GetSearch_WithEmptyQuery_ShouldReturnBadRequest()
+    public async Task McpSearch_WithValidQuery_ShouldReturnSuccessResponse()
     {
+        // Arrange
+        var request = new McpRequest
+        {
+            JsonRpc = "2.0",
+            Id = 1,
+            Method = "tools/call",
+            Params = new
+            {
+                name = "wikipedia_search",
+                arguments = new { query = "artificial intelligence" }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
         // Act
-        var response = await _client.GetAsync("/api/wikipedia/search?query=");
-
-        // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task GetSections_WithValidTopic_ShouldReturnSuccessResponse()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/wikipedia/sections?topic=machine learning");
-
-        // Assert
-        response.IsSuccessStatusCode.Should().BeTrue();
-        var content = await response.Content.ReadAsStringAsync();
-        content.Should().NotBeNullOrEmpty();
-        
-        // Verify it's valid JSON
-        var jsonDoc = JsonDocument.Parse(content);
-        jsonDoc.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task GetSections_WithEmptyTopic_ShouldReturnBadRequest()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/wikipedia/sections?topic=");
-
-        // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task GetSectionContent_WithValidParameters_ShouldReturnSuccessResponse()
-    {
-        // Act
-        var response = await _client.GetAsync("/api/wikipedia/section-content?topic=python&sectionTitle=History");
+        var response = await _client.PostAsync("/", content);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
-        var content = await response.Content.ReadAsStringAsync();
-        content.Should().NotBeNullOrEmpty();
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().NotBeNullOrEmpty();
         
-        // Verify it's valid JSON
-        var jsonDoc = JsonDocument.Parse(content);
+        // Verify it's valid JSON-RPC response
+        var jsonResponse = ExtractJsonFromSseResponse(responseContent);
+        var jsonDoc = JsonDocument.Parse(jsonResponse);
         jsonDoc.Should().NotBeNull();
+        jsonDoc.RootElement.GetProperty("jsonrpc").GetString().Should().Be("2.0");
+        jsonDoc.RootElement.GetProperty("id").GetInt32().Should().Be(1);
     }
 
     [Fact]
-    public async Task GetSectionContent_WithEmptyTopic_ShouldReturnBadRequest()
+    public async Task McpSections_WithValidTopic_ShouldReturnSuccessResponse()
     {
+        // Arrange
+        var request = new McpRequest
+        {
+            JsonRpc = "2.0",
+            Id = 1,
+            Method = "tools/call",
+            Params = new
+            {
+                name = "wikipedia_sections",
+                arguments = new { topic = "machine learning" }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+        var requestContent = new StringContent(json, Encoding.UTF8, "application/json");
+
         // Act
-        var response = await _client.GetAsync("/api/wikipedia/section-content?topic=&sectionTitle=History");
+        var response = await _client.PostAsync("/", requestContent);
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        response.IsSuccessStatusCode.Should().BeTrue();
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().NotBeNullOrEmpty();
+        
+        // Verify it's valid JSON-RPC response
+        var jsonResponse = ExtractJsonFromSseResponse(responseContent);
+        var jsonDoc = JsonDocument.Parse(jsonResponse);
+        jsonDoc.Should().NotBeNull();
+        jsonDoc.RootElement.GetProperty("jsonrpc").GetString().Should().Be("2.0");
+        jsonDoc.RootElement.GetProperty("id").GetInt32().Should().Be(1);
     }
 
     [Fact]
-    public async Task GetSectionContent_WithEmptySectionTitle_ShouldReturnBadRequest()
+    public async Task McpSectionContent_WithValidParameters_ShouldReturnSuccessResponse()
     {
+        // Arrange
+        var request = new McpRequest
+        {
+            JsonRpc = "2.0",
+            Id = 1,
+            Method = "tools/call",
+            Params = new
+            {
+                name = "wikipedia_section_content",
+                arguments = new { topic = "python", section_title = "History" }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
         // Act
-        var response = await _client.GetAsync("/api/wikipedia/section-content?topic=python&sectionTitle=");
+        var response = await _client.PostAsync("/", content);
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        response.IsSuccessStatusCode.Should().BeTrue();
+        var responseContent = await response.Content.ReadAsStringAsync();
+        responseContent.Should().NotBeNullOrEmpty();
+        
+        // Verify it's valid JSON-RPC response
+        var jsonResponse = ExtractJsonFromSseResponse(responseContent);
+        var jsonDoc = JsonDocument.Parse(jsonResponse);
+        jsonDoc.Should().NotBeNull();
+        jsonDoc.RootElement.GetProperty("jsonrpc").GetString().Should().Be("2.0");
+        jsonDoc.RootElement.GetProperty("id").GetInt32().Should().Be(1);
     }
 
     [Fact]
@@ -131,8 +197,5 @@ public class WikipediaControllerIntegrationTests : IClassFixture<WebApplicationF
         httpClient.Should().NotBeNull();
     }
 
-    private void Dispose()
-    {
-        _client?.Dispose();
-    }
+
 }

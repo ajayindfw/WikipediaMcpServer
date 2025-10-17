@@ -1,6 +1,6 @@
 # Wikipedia MCP Server (ASP.NET Core 8)
 
-A production-ready Model Context Protocol (MCP) server implementation for Wikipedia search and content retrieval, built with ASP.NET Core 8 and C#. Features comprehensive testing with **182 total tests** and enterprise-grade reliability.
+A production-ready Model Context Protocol (MCP) server implementation for Wikipedia search and content retrieval, built with ASP.NET Core 8 and C#. Features comprehensive testing with **206 total tests** and enterprise-grade reliability.
 
 ## Features
 
@@ -11,8 +11,9 @@ This server provides three main Wikipedia-related tools with full test coverage:
 3. **Wikipedia Section Content** - Retrieve content from specific sections of Wikipedia articles
 
 ### **🏆 Production Ready**
-- ✅ **182 comprehensive tests** (Unit, Service, Integration)
+- ✅ **206 comprehensive tests** (Unit, Service, Integration, stdio)
 - ✅ **100% test pass rate** ensuring reliability
+- ✅ **Automated stdio mode testing** with real process spawning
 - ✅ **Professional .NET project structure** with src/ and tests/ organization
 - ✅ **Enhanced error handling** and validation
 - ✅ **Code coverage reporting** with detailed analysis
@@ -50,20 +51,94 @@ This server provides three main Wikipedia-related tools with full test coverage:
 
 ## Usage Modes
 
-This server can run in two modes:
+This server supports **dual transport modes**:
 
-1. **HTTP API Server** - Traditional REST API endpoints
-2. **MCP Server** - Model Context Protocol server for AI integration
+### 1. **stdio Mode** - For Local AI Client Integration (Recommended)
 
-### Running as HTTP API Server
-
-To run as a traditional HTTP API server:
+Run in stdio (standard input/output) mode for seamless integration with AI clients like VS Code and Claude Desktop:
 
 ```bash
-dotnet run
+dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj -- --mcp
+```
+
+**Benefits:**
+- 🔐 **Secure** - No network ports exposed
+- 🚀 **Fast** - Direct process communication
+- 🎯 **Simple** - No HTTP/SSE overhead
+- ✅ **Compatible** - Works with VS Code MCP Extension, Claude Desktop, and other MCP clients
+
+**VS Code Configuration (`mcp.json`):**
+
+```json
+{
+  "mcpServers": {
+    "wikipedia-local": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/absolute/path/to/src/WikipediaMcpServer/WikipediaMcpServer.csproj",
+        "--",
+        "--mcp"
+      ],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "description": "Local Wikipedia MCP Server"
+    }
+  }
+}
+```
+
+**Claude Desktop Configuration:**
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "wikipedia": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/absolute/path/to/src/WikipediaMcpServer/WikipediaMcpServer.csproj",
+        "--",
+        "--mcp"
+      ]
+    }
+  }
+}
+```
+
+**Testing stdio Mode:**
+
+```bash
+# Test manually with a simple initialize message
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}' | \
+dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj -- --mcp
+
+# Or run automated stdio tests
+dotnet test --filter "FullyQualifiedName~StdioTests"
+```
+
+📚 **See [STDIO_MODE_GUIDE.md](STDIO_MODE_GUIDE.md) for complete documentation.**
+
+### 2. **HTTP Mode** - For Remote Deployments and Testing
+
+To run as an HTTP API server (default mode):
+
+```bash
+dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj
 ```
 
 The server will start on `http://localhost:5070` by default.
+
+**Use HTTP mode for:**
+- 🌐 Remote deployments (Render, Azure, AWS)
+- 🧪 Postman API testing
+- 🔗 HTTP-based integrations
+- 📊 Load testing and monitoring
 
 ### Running as Remote MCP Server
 
@@ -400,10 +475,10 @@ curl https://your-deployment-url.onrender.com/api/wikipedia/health
 
 #### **Postman Collection Testing (Recommended)**
 
-This repository includes a **dedicated remote testing collection** specifically designed for deployment validation:
+This repository includes **updated JSON-RPC 2.0 collections** specifically designed for deployment validation:
 
 **📦 Remote Testing Files:**
-- **`WikipediaMcpServer-Remote-Collection.json`** - Complete remote deployment test suite (12 tests)
+- **`WikipediaMcpServer-Remote-MCP-JsonRPC-Collection.json`** - Complete remote JSON-RPC 2.0 test suite
 - **`WikipediaMcpServer-Remote-Environment.postman_environment.json`** - Pre-configured environment variables
 
 **🚀 Quick Setup:**
@@ -413,7 +488,7 @@ This repository includes a **dedicated remote testing collection** specifically 
    # In Postman:
    # 1. File → Import
    # 2. Select both files from the repository root
-   # 3. WikipediaMcpServer-Remote-Collection.json (test suite)
+   # 3. WikipediaMcpServer-Remote-MCP-JsonRPC-Collection.json (JSON-RPC test suite)
    # 4. WikipediaMcpServer-Remote-Environment.postman_environment.json (environment)
    ```
 
@@ -500,7 +575,7 @@ This repository includes a **dedicated remote testing collection** specifically 
 
 ## Testing
 
-This project includes a comprehensive test suite with **182 total tests** across three categories, ensuring 100% reliability and production readiness.
+This project includes a comprehensive test suite with **206 total tests** across four categories, ensuring 100% reliability and production readiness for both HTTP and stdio transport modes.
 
 ### 🧪 **Automated Test Suite**
 
@@ -519,9 +594,9 @@ dotnet test --verbosity normal
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-#### **Test Categories (182 Total Tests)**
+#### **Test Categories (206 Total Tests)**
 
-##### **1. Unit Tests (77 tests)**
+##### **1. Unit Tests (13 tests)**
 Location: `tests/WikipediaMcpServer.UnitTests/`
 
 **Coverage:**
@@ -535,13 +610,12 @@ Location: `tests/WikipediaMcpServer.UnitTests/`
 dotnet test tests/WikipediaMcpServer.UnitTests/
 ```
 
-##### **2. Service Tests (56 tests)**
+##### **2. Service Tests (90 tests)**
 Location: `tests/WikipediaMcpServer.ServiceTests/`
 
 **Coverage:**
 - **Wikipedia Service Tests** - Wikipedia API integration
-- **MCP Server Service Tests** - JSON-RPC protocol handling
-- **HTTP Client Tests** - External API communication
+- **HTTP Client Tests** - External API communication (mocked)
 - **Error Handling Tests** - Network failures and API errors
 
 ```bash
@@ -549,19 +623,39 @@ Location: `tests/WikipediaMcpServer.ServiceTests/`
 dotnet test tests/WikipediaMcpServer.ServiceTests/
 ```
 
-##### **3. Integration Tests (49 tests)**
+##### **3. Integration Tests (95 tests)**
 Location: `tests/WikipediaMcpServer.IntegrationTests/`
 
 **Coverage:**
-- **HTTP API Endpoint Tests** - Full request/response cycles
-- **Controller Integration Tests** - ASP.NET Core pipeline
-- **Validation Pipeline Tests** - ModelState validation
-- **End-to-End Workflow Tests** - Complete user scenarios
+- **HTTP Transport Tests** - Full JSON-RPC over HTTP/SSE
+- **MCP Protocol Tests** - Initialize, tools/list, tools/call
+- **Controller Integration Tests** - ASP.NET Core with WebApplicationFactory
+- **End-to-End Workflow Tests** - Complete Wikipedia tool scenarios
 
 ```bash
 # Run only integration tests
 dotnet test tests/WikipediaMcpServer.IntegrationTests/
 ```
+
+##### **4. stdio Transport Tests (8 tests)** 🆕
+Location: `tests/WikipediaMcpServer.StdioTests/`
+
+**Coverage:**
+- **stdio Process Tests** - Real process spawning with `--mcp` flag
+- **JSON-RPC via stdin/stdout** - Complete stdio transport validation
+- **Wikipedia Tool Execution** - All 3 tools via stdio
+- **Error Handling** - Invalid methods, malformed JSON, missing parameters
+
+```bash
+# Run only stdio tests
+dotnet test tests/WikipediaMcpServer.StdioTests/
+```
+
+**Features:**
+- ✅ Spawns actual MCP server process
+- ✅ Validates stdin/stdout communication
+- ✅ Tests VS Code/Claude Desktop integration scenarios
+- ✅ Automated - no manual bash scripts needed
 
 #### **Test Results Dashboard**
 
@@ -574,21 +668,25 @@ open CoverageReport/index.html
 
 ### 🚀 **Quick Protocol Testing**
 
-#### **Method 1: Automated JSON-RPC Testing (Recommended)**
+#### **Method 1: Automated Testing (Recommended)**
 
-Use the included test script for immediate validation:
+Run the comprehensive automated test suite:
 
 ```bash
-# Run comprehensive JSON-RPC MCP protocol tests
-./test-json-rpc.sh
+# Run all stdio tests (8 tests)
+dotnet test --filter "FullyQualifiedName~StdioTests"
+
+# Or run all tests (206 tests - includes HTTP, unit, service, and stdio tests)
+dotnet test
 ```
 
-**This script tests:**
+**The automated tests cover:**
 - ✅ MCP server initialization
 - ✅ Tool discovery and listing
 - ✅ Wikipedia search functionality
 - ✅ Wikipedia sections retrieval
 - ✅ Wikipedia section content access
+- ✅ Error handling (invalid methods, malformed JSON, missing parameters)
 - ✅ Protocol compliance verification
 
 #### **Method 2: Manual Interactive Testing**
@@ -643,50 +741,70 @@ dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj
 
 **For Local Development Testing:**
 
-A comprehensive Postman collection is provided for testing your local server:
+A comprehensive **JSON-RPC 2.0 MCP Protocol** Postman collection is provided for testing your local server:
 
-1. **Import the LOCAL collection**: `WikipediaMcpServer-Postman-Collection.json`
-2. **Import the LOCAL environment**: `WikipediaMcpServer-Environment.postman_environment.json`
+1. **Import the MCP collection**: `WikipediaMcpServer-MCP-JsonRPC-Collection.json`
+2. **Import the environment**: `WikipediaMcpServer-Environment.postman_environment.json`
 3. **Ensure your local server is running** on `http://localhost:5070`
-4. **Run the collection** to test all endpoints with automated assertions
+4. **Run the collection** to test all MCP protocol endpoints with automated assertions
 
-> **💡 Note**: For remote deployment testing, use the **Remote Collection** described in the "Remote Deployment Testing" section above.
+> **� Important**: This server now uses the **Microsoft MCP SDK** with JSON-RPC 2.0 protocol. The old REST API endpoints (`/api/wikipedia/*`) no longer exist.
 
-The local collection includes:
+The MCP collection includes:
 
-- ✅ Health check tests
-- ✅ Search functionality tests (with exact Wikipedia page titles)
-- ✅ Sections retrieval tests
-- ✅ Section content tests
-- ✅ Error handling validation
-- ✅ Response time and format validation
-- ✅ Complete workflow testing
+- ✅ Health check and server info tests
+- ✅ MCP protocol initialization tests (`initialize`, `tools/list`)
+- ✅ Wikipedia search tool tests via JSON-RPC (`tools/call`)
+- ✅ Wikipedia sections tool tests via JSON-RPC
+- ✅ Wikipedia section content tool tests via JSON-RPC
+- ✅ Error handling validation for JSON-RPC 2.0
+- ✅ Complete MCP workflow testing
+- ✅ JSON-RPC 2.0 protocol compliance validation
 
-**Collection Features:**
+**MCP Collection Features:**
 
-- 16 comprehensive test requests
-- 50+ automated test assertions
-- Proper error handling validation
-- Performance testing
+- 15+ JSON-RPC 2.0 test requests
+- 40+ automated test assertions for MCP protocol
+- Proper JSON-RPC error handling validation
+- MCP initialization handshake testing
+- Tool discovery and invocation testing
 - Environment variables for easy configuration
 
-#### Option B: Using curl
+#### Option B: Using curl (JSON-RPC 2.0)
 
-Test endpoints with curl:
+Test MCP endpoints with curl using JSON-RPC 2.0 protocol:
 
 ```bash
 # Health check
-curl "http://localhost:5070/api/wikipedia/health"
+curl "http://localhost:5070/health"
 
-# Search Wikipedia (use exact Wikipedia page titles)
-curl "http://localhost:5070/api/wikipedia/search?query=Artificial%20intelligence"
-curl "http://localhost:5070/api/wikipedia/search?query=Python%20%28programming%20language%29"
+# Server info
+curl "http://localhost:5070/info"
 
-# Get sections
-curl "http://localhost:5070/api/wikipedia/sections?topic=Python%20%28programming%20language%29"
+# MCP Initialize
+curl -X POST "http://localhost:5070/" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}'
 
-# Get section content
-curl "http://localhost:5070/api/wikipedia/section-content?topic=Python%20%28programming%20language%29&sectionTitle=History"
+# List available tools
+curl -X POST "http://localhost:5070/" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+
+# Search Wikipedia via MCP tool
+curl -X POST "http://localhost:5070/" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wikipedia_search","arguments":{"query":"Artificial intelligence"}}}'
+
+# Get sections via MCP tool  
+curl -X POST "http://localhost:5070/" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"wikipedia_sections","arguments":{"topic":"Machine learning"}}}'
+
+# Get section content via MCP tool
+curl -X POST "http://localhost:5070/" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"wikipedia_section_content","arguments":{"topic":"Artificial intelligence","sectionTitle":"Overview"}}}'
 ```
 
 **Important**: Use exact Wikipedia page titles (e.g., "Python (programming language)" instead of "Python programming") for reliable results.
@@ -807,19 +925,21 @@ WikipediaMcpServer/
 │   │   │   ├── McpServerServiceTests.cs                # MCP service tests
 │   │   │   └── WikipediaServiceTests.cs                # Wikipedia API service tests
 │   │   └── WikipediaMcpServer.ServiceTests.csproj     # Service test project file
-│   └── WikipediaMcpServer.IntegrationTests/            # Integration tests (49 tests)
-│       ├── ProgramIntegrationTests.cs                  # Application startup tests
-│       ├── WikipediaControllerIntegrationTests.cs     # Basic controller tests
-│       ├── WikipediaControllerComprehensiveTests.cs   # Comprehensive endpoint tests
-│       └── WikipediaMcpServer.IntegrationTests.csproj # Integration test project file
+│   ├── WikipediaMcpServer.IntegrationTests/            # Integration tests (51 tests)
+│   │   ├── ProgramIntegrationTests.cs                  # Application startup tests
+│   │   ├── WikipediaControllerIntegrationTests.cs     # Basic controller tests
+│   │   ├── WikipediaControllerComprehensiveTests.cs   # Comprehensive endpoint tests
+│   │   └── WikipediaMcpServer.IntegrationTests.csproj # Integration test project file
+│   └── WikipediaMcpServer.StdioTests/                  # Stdio mode tests (8 tests)
+│       ├── StdioModeTests.cs                           # Stdio transport integration tests
+│       └── WikipediaMcpServer.StdioTests.csproj       # Stdio test project file
 ├── CoverageReport/                                     # Code coverage reports
 │   ├── index.html                                      # Coverage dashboard
 │   └── ...                                             # Detailed coverage files
 ├── docs/                                               # Additional documentation
-├── test-json-rpc.sh                                    # Automated MCP protocol testing script
 ├── mcp.json                                            # Example MCP configuration (reference only)
 ├── WikipediaMcpServer.sln                             # Solution file
-├── WikipediaMcpServer-Postman-Collection.json         # Local development Postman collection
+├── WikipediaMcpServer-MCP-JsonRPC-Collection.json      # JSON-RPC 2.0 MCP Protocol Postman collection
 ├── WikipediaMcpServer-Environment.postman_environment.json  # Local development environment
 ├── WikipediaMcpServer-Remote-Collection.json          # Remote deployment testing collection  
 └── WikipediaMcpServer-Remote-Environment.postman_environment.json  # Remote deployment environment
@@ -836,7 +956,7 @@ The application uses several configuration approaches:
 ## Testing Files
 
 **For Local Development Testing:**
-- `WikipediaMcpServer-Postman-Collection.json` - Local development Postman collection
+- `WikipediaMcpServer-MCP-JsonRPC-Collection.json` - JSON-RPC 2.0 MCP Protocol Postman collection
 - `WikipediaMcpServer-Environment.postman_environment.json` - Local environment variables
 
 **For Remote Deployment Testing:**
