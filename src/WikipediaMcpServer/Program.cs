@@ -206,7 +206,16 @@ static async Task RunStdioModeAsync()
         builder.SetMinimumLevel(LogLevel.Information);
     });
     
-    var serviceProvider = services.BuildServiceProvider();
+    // Build service provider with validation for stdio mode
+    // This is intentional and necessary for stdio mode where we need manual DI container
+    // Suppress ASP0000 warning as this is not the typical web application scenario
+#pragma warning disable ASP0000
+    var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions 
+    { 
+        ValidateOnBuild = true,
+        ValidateScopes = true 
+    });
+#pragma warning restore ASP0000
     
     Console.Error.WriteLine("✅ stdio mode initialized - ready for JSON-RPC messages");
     
