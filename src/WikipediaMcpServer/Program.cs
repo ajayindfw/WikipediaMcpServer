@@ -132,6 +132,66 @@ builder.Services.AddMcpServer()
     // Configure MCP endpoints
     app.MapMcp();
 
+    // Add HTTP POST endpoint for remote MCP access (supports JSON-RPC over HTTP)
+    // This allows remote clients to use the MCP server via simple HTTP POST requests
+    // The mcp-http-bridge.js script uses this endpoint
+    app.MapPost("/mcp/rpc", async (HttpContext context, IWikipediaService wikipediaService) =>
+    {
+        try
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            var requestBody = await reader.ReadToEndAsync();
+            
+            Console.WriteLine($"📥 HTTP MCP Request: {requestBody.Substring(0, Math.Min(100, requestBody.Length))}...");
+            
+            // Parse JSON-RPC request
+            var jsonDoc = JsonDocument.Parse(requestBody);
+            var root = jsonDoc.RootElement;
+            
+            if (!root.TryGetProperty("method", out var method))
+            {
+                return Results.Json(new { 
+                    jsonrpc = "2.0", 
+                    id = (object?)null, 
+                    error = new { code = -32600, message = "Invalid Request: missing method" }
+                }, statusCode: 400);
+            }
+            
+            var methodName = method.GetString();
+            Console.WriteLine($"🎯 HTTP Method: {methodName}");
+            
+            // Handle different MCP methods using the same logic as stdio mode
+            var response = methodName switch
+            {
+                "initialize" => await HandleInitializeHttp(root),
+                "tools/list" => await HandleToolsListHttp(root),
+                "tools/call" => await HandleToolsCallHttp(root, wikipediaService),
+                _ => CreateErrorResponseHttp(root, -32601, "Method not found")
+            };
+            
+            Console.WriteLine($"📤 HTTP Response sent");
+            return Results.Json(response);
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"❌ JSON Parse Error: {ex.Message}");
+            return Results.Json(new { 
+                jsonrpc = "2.0", 
+                id = (object?)null, 
+                error = new { code = -32700, message = $"Parse error: {ex.Message}" }
+            }, statusCode: 400);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ HTTP Error: {ex.Message}");
+            return Results.Json(new { 
+                jsonrpc = "2.0", 
+                id = (object?)null, 
+                error = new { code = -32603, message = $"Internal error: {ex.Message}" }
+            }, statusCode: 500);
+        }
+    });
+
     // Add health check endpoint with JSON response
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
     {
@@ -154,9 +214,15 @@ builder.Services.AddMcpServer()
         version = "v8.1",
         status = "running",
         framework = "Microsoft ModelContextProtocol v0.4.0-preview.2",
+        transports = new {
+            stdio = "Use --mcp flag for local stdio mode (VS Code, Claude Desktop)",
+            http_sdk = "/mcp endpoint (Microsoft MCP SDK - SSE/WebSocket)",
+            http_rpc = "/mcp/rpc endpoint (JSON-RPC over HTTP POST for remote access)"
+        },
         endpoints = new {
             health = "/health",
             mcp = "/mcp",
+            mcpRpc = "/mcp/rpc",
             swagger = "/swagger",
             info = "/info"
         }
@@ -165,7 +231,8 @@ builder.Services.AddMcpServer()
     Console.WriteLine("🚀 Wikipedia MCP Server v8.1");
     Console.WriteLine("📊 Available at: http://localhost:5070");
     Console.WriteLine("🔧 Endpoints:");
-    Console.WriteLine("   POST / - Main MCP JSON-RPC endpoint (via Microsoft SDK)");  
+    Console.WriteLine("   POST /mcp/rpc - Remote MCP JSON-RPC endpoint (for mcp-http-bridge.js)");
+    Console.WriteLine("   POST /mcp - Microsoft MCP SDK endpoint (SSE/WebSocket)");
     Console.WriteLine("   GET  /health - Health check");
     Console.WriteLine("   GET  /info - Server info");
     Console.WriteLine("   GET  /swagger - API documentation");
@@ -328,6 +395,165 @@ static string CreateErrorResponse(JsonElement request, int code, string message)
     // Escape message for JSON and use compact single-line format (required by JSON-RPC 2.0 spec)
     var escapedMessage = JsonSerializer.Serialize(message);
     return $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"error\":{{\"code\":{code},\"message\":{escapedMessage}}}}}";
+}
+
+// HTTP endpoint handlers (for remote MCP access via HTTP POST)
+// These return objects instead of JSON strings for ASP.NET Core's JSON serialization
+
+static Task<object> HandleInitializeHttp(JsonElement request)
+{
+    var id = request.TryGetProperty("id", out var idProp) ? (object)idProp.GetInt32() : null;
+    var response = new
+    {
+        jsonrpc = "2.0",
+        id = id,
+        result = new
+        {
+            protocolVersion = "2024-11-05",
+            capabilities = new { tools = new { } },
+            serverInfo = new
+            {
+                name = "Wikipedia MCP Server",
+                version = "8.1.0"
+            }
+        }
+    };
+    return Task.FromResult<object>(response);
+}
+
+static Task<object> HandleToolsListHttp(JsonElement request)
+{
+    var id = request.TryGetProperty("id", out var idProp) ? (object)idProp.GetInt32() : null;
+    var response = new
+    {
+        jsonrpc = "2.0",
+        id = id,
+        result = new
+        {
+            tools = new object[]
+            {
+                new
+                {
+                    name = "wikipedia_search",
+                    description = "Search Wikipedia for topics and articles",
+                    inputSchema = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            query = new
+                            {
+                                type = "string",
+                                description = "The search query to find Wikipedia articles"
+                            }
+                        },
+                        required = new[] { "query" }
+                    }
+                },
+                new
+                {
+                    name = "wikipedia_sections",
+                    description = "Get the sections/outline of a Wikipedia page",
+                    inputSchema = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            topic = new
+                            {
+                                type = "string",
+                                description = "The topic/page title to get sections for"
+                            }
+                        },
+                        required = new[] { "topic" }
+                    }
+                },
+                new
+                {
+                    name = "wikipedia_section_content",
+                    description = "Get the content of a specific section from a Wikipedia page",
+                    inputSchema = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            topic = new
+                            {
+                                type = "string",
+                                description = "The Wikipedia topic/page title"
+                            },
+                            sectionTitle = new
+                            {
+                                type = "string",
+                                description = "The title of the section to retrieve content for"
+                            }
+                        },
+                        required = new[] { "topic", "sectionTitle" }
+                    }
+                }
+            }
+        }
+    };
+    return Task.FromResult<object>(response);
+}
+
+static async Task<object> HandleToolsCallHttp(JsonElement request, IWikipediaService wikipediaService)
+{
+    var id = request.TryGetProperty("id", out var idProp) ? (object)idProp.GetInt32() : null;
+    
+    try
+    {
+        var toolName = request.GetProperty("params").GetProperty("name").GetString();
+        var arguments = request.GetProperty("params").GetProperty("arguments");
+        
+        string resultText = toolName switch
+        {
+            "wikipedia_search" => await WikipediaTools.SearchWikipedia(wikipediaService, arguments.GetProperty("query").GetString()!),
+            "wikipedia_sections" => await WikipediaTools.GetWikipediaSections(wikipediaService, arguments.GetProperty("topic").GetString()!),
+            "wikipedia_section_content" => await WikipediaTools.GetWikipediaSectionContent(
+                wikipediaService,
+                arguments.GetProperty("topic").GetString()!,
+                // Support both snake_case (from VS Code MCP) and camelCase (from direct calls)
+                arguments.TryGetProperty("section_title", out var snakeCase) ? snakeCase.GetString()! : arguments.GetProperty("sectionTitle").GetString()!),
+            _ => $"Unknown tool: {toolName}"
+        };
+        
+        return new
+        {
+            jsonrpc = "2.0",
+            id = id,
+            result = new
+            {
+                content = new object[]
+                {
+                    new
+                    {
+                        type = "text",
+                        text = resultText
+                    }
+                }
+            }
+        };
+    }
+    catch (Exception ex)
+    {
+        return CreateErrorResponseHttp(request, -32603, $"Internal error: {ex.Message}");
+    }
+}
+
+static object CreateErrorResponseHttp(JsonElement request, int code, string message)
+{
+    var id = request.TryGetProperty("id", out var idProp) ? (object)idProp.GetInt32() : null;
+    return new
+    {
+        jsonrpc = "2.0",
+        id = id,
+        error = new
+        {
+            code = code,
+            message = message
+        }
+    };
 }
 
 // Make Program class accessible for integration tests

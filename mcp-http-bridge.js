@@ -12,10 +12,11 @@
  */
 
 const https = require('https');
+const http = require('http');
 const readline = require('readline');
 
-// Configuration
-const REMOTE_SERVER_URL = 'https://wikipediamcpserver.onrender.com/api/wikipedia';
+// Configuration - can be overridden with environment variable
+const REMOTE_SERVER_URL = process.env.REMOTE_SERVER_URL || 'https://wikipediamcpserver.onrender.com/mcp/rpc';
 const TIMEOUT = 30000; // 30 seconds
 const DEBUG = process.env.MCP_DEBUG === 'true';
 
@@ -39,10 +40,11 @@ function sendHttpRequest(data) {
         debug(`Request data: ${postData}`);
         
         const url = new URL(REMOTE_SERVER_URL);
+        const isHttps = url.protocol === 'https:';
         
         const options = {
             hostname: url.hostname,
-            port: url.port || 443,
+            port: url.port || (isHttps ? 443 : 80),
             path: url.pathname,
             method: 'POST',
             headers: {
@@ -52,7 +54,8 @@ function sendHttpRequest(data) {
             }
         };
 
-        const req = https.request(options, (res) => {
+        const protocol = isHttps ? https : http;
+        const req = protocol.request(options, (res) => {
             let responseData = '';
             
             res.on('data', (chunk) => {
