@@ -266,84 +266,16 @@ static async Task RunStdioModeAsync()
 static Task<string> HandleInitialize(JsonElement request)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
-    var response = $$"""
-    {
-        "jsonrpc": "2.0",
-        "id": {{id}},
-        "result": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {
-                "tools": {}
-            },
-            "serverInfo": {
-                "name": "Wikipedia MCP Server",
-                "version": "8.0.0"
-            }
-        }
-    }
-    """;
+    // Use compact single-line JSON for stdio mode (required by JSON-RPC 2.0 spec)
+    var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{{\"tools\":{{}}}},\"serverInfo\":{{\"name\":\"Wikipedia MCP Server\",\"version\":\"8.0.0\"}}}}}}";
     return Task.FromResult(response);
 }
 
 static Task<string> HandleToolsList(JsonElement request)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
-    var response = $$"""
-    {
-        "jsonrpc": "2.0",
-        "id": {{id}},
-        "result": {
-            "tools": [
-                {
-                    "name": "wikipedia_search",
-                    "description": "Search Wikipedia for topics and articles",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "The search query to find Wikipedia articles"
-                            }
-                        },
-                        "required": ["query"]
-                    }
-                },
-                {
-                    "name": "wikipedia_sections",
-                    "description": "Get the sections/outline of a Wikipedia page",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "topic": {
-                                "type": "string",
-                                "description": "The topic/page title to get sections for"
-                            }
-                        },
-                        "required": ["topic"]
-                    }
-                },
-                {
-                    "name": "wikipedia_section_content",
-                    "description": "Get the content of a specific section from a Wikipedia page",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "topic": {
-                                "type": "string",
-                                "description": "The Wikipedia topic/page title"
-                            },
-                            "sectionTitle": {
-                                "type": "string",
-                                "description": "The title of the section to retrieve content for"
-                            }
-                        },
-                        "required": ["topic", "sectionTitle"]
-                    }
-                }
-            ]
-        }
-    }
-    """;
+    // Use compact single-line JSON for stdio mode (required by JSON-RPC 2.0 spec)
+    var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"tools\":[{{\"name\":\"wikipedia_search\",\"description\":\"Search Wikipedia for topics and articles\",\"inputSchema\":{{\"type\":\"object\",\"properties\":{{\"query\":{{\"type\":\"string\",\"description\":\"The search query to find Wikipedia articles\"}}}},\"required\":[\"query\"]}}}},{{\"name\":\"wikipedia_sections\",\"description\":\"Get the sections/outline of a Wikipedia page\",\"inputSchema\":{{\"type\":\"object\",\"properties\":{{\"topic\":{{\"type\":\"string\",\"description\":\"The topic/page title to get sections for\"}}}},\"required\":[\"topic\"]}}}},{{\"name\":\"wikipedia_section_content\",\"description\":\"Get the content of a specific section from a Wikipedia page\",\"inputSchema\":{{\"type\":\"object\",\"properties\":{{\"topic\":{{\"type\":\"string\",\"description\":\"The Wikipedia topic/page title\"}},\"sectionTitle\":{{\"type\":\"string\",\"description\":\"The title of the section to retrieve content for\"}}}},\"required\":[\"topic\",\"sectionTitle\"]}}}}]}}}}";
     return Task.FromResult(response);
 }
 
@@ -365,25 +297,14 @@ static async Task<string> HandleToolsCall(JsonElement request, IServiceProvider 
             "wikipedia_section_content" => await WikipediaTools.GetWikipediaSectionContent(
                 wikipediaService,
                 arguments.GetProperty("topic").GetString()!,
-                arguments.GetProperty("sectionTitle").GetString()!),
+                // Support both snake_case (from VS Code MCP) and camelCase (from direct calls)
+                arguments.TryGetProperty("section_title", out var snakeCase) ? snakeCase.GetString()! : arguments.GetProperty("sectionTitle").GetString()!),
             _ => $"Unknown tool: {toolName}"
         };
         
         var escapedText = JsonSerializer.Serialize(resultText);
-        var response = $$"""
-        {
-            "jsonrpc": "2.0",
-            "id": {{id}},
-            "result": {
-                "content": [
-                    {
-                        "type": "text",
-                        "text": {{escapedText}}
-                    }
-                ]
-            }
-        }
-        """;
+        // Use compact single-line JSON for stdio mode (required by JSON-RPC 2.0 spec)
+        var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"content\":[{{\"type\":\"text\",\"text\":{escapedText}}}]}}}}";
         return response;
     }
     catch (Exception ex)
@@ -395,16 +316,9 @@ static async Task<string> HandleToolsCall(JsonElement request, IServiceProvider 
 static string CreateErrorResponse(JsonElement request, int code, string message)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
-    return $$"""
-    {
-        "jsonrpc": "2.0",
-        "id": {{id}},
-        "error": {
-            "code": {{code}},
-            "message": "{{message}}"
-        }
-    }
-    """;
+    // Escape message for JSON and use compact single-line format (required by JSON-RPC 2.0 spec)
+    var escapedMessage = JsonSerializer.Serialize(message);
+    return $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"error\":{{\"code\":{code},\"message\":{escapedMessage}}}}}";
 }
 
 // Make Program class accessible for integration tests

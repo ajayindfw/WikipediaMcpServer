@@ -967,6 +967,16 @@ The application uses several configuration approaches:
 
 This project follows semantic versioning and includes tagged releases:
 
+- **v8.1** - VS Code MCP Integration Fix - JSON-RPC 2.0 stdio compliance (206 tests)
+  - Fixed stdio mode JSON formatting for VS Code MCP client compatibility
+  - Added parameter name compatibility (snake_case and camelCase)
+  - Compact single-line JSON-RPC responses (required by JSON-RPC 2.0 spec)
+  - All 206 tests passing with full VS Code MCP integration validated
+- **v8.0** - Microsoft MCP SDK Migration (206 tests)
+  - Migrated to official Microsoft ModelContextProtocol SDK v0.4.0-preview.2
+  - Enhanced stdio mode implementation with improved protocol compliance
+  - Added 24 new stdio transport tests
+  - Professional .NET solution structure maintained
 - **v4.0** - Production-ready release with comprehensive testing (182 tests), professional .NET structure, enhanced MCP protocol support, and complete HTTP API compatibility
 - **v3.0** - Enhanced API integration and improved error handling  
 - **v2.0** - Professional project structure with src/ and tests/ organization
@@ -978,6 +988,7 @@ Each release is tagged and available on GitHub with detailed release notes.
 
 ### **Core Framework**
 - **ASP.NET Core 8** - Web framework and dependency injection
+- **Microsoft ModelContextProtocol SDK v0.4.0-preview.2** - Official MCP server implementation
 - **System.Text.Json 8.0.5** - JSON serialization (security-updated version)
 - **HttpClient** - HTTP requests to Wikipedia API
 
