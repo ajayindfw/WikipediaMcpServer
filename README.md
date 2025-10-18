@@ -126,6 +126,8 @@ dotnet test --filter "FullyQualifiedName~StdioTests"
 
 ### 2. **HTTP Mode** - For Remote Deployments and Testing
 
+📚 **See [REMOTE_MCP_SETUP.md](REMOTE_MCP_SETUP.md) for remote access setup guide.**
+
 To run as an HTTP API server (default mode):
 
 ```bash
@@ -144,6 +146,8 @@ The server will start on `http://localhost:5070` by default.
 
 The Wikipedia MCP Server can be deployed and accessed remotely, allowing multiple clients to use the service without running it locally. This is particularly useful for teams or when you want to avoid local resource usage.
 
+**New in v8.2:** The server now supports remote MCP access via the `/mcp/rpc` HTTP POST endpoint, enabling JSON-RPC 2.0 over HTTP for easy remote integration.
+
 #### Remote Deployment Options
 
 ##### Option 1: Render (Recommended)
@@ -151,10 +155,25 @@ The Wikipedia MCP Server can be deployed and accessed remotely, allowing multipl
 The server is already deployed and available at:
 **https://wikipediamcpserver.onrender.com**
 
+**Available Endpoints:**
+- `/health` - Health check endpoint
+- `/info` - Server information and available endpoints
+- `/mcp/rpc` - Remote MCP JSON-RPC endpoint (v8.2+)
+- `/mcp` - Microsoft MCP SDK endpoint (SSE/WebSocket)
+
 To verify the remote server is running:
 
 ```bash
-curl https://wikipediamcpserver.onrender.com/api/wikipedia/health
+# Health check
+curl https://wikipediamcpserver.onrender.com/health
+
+# Server info (shows all endpoints)
+curl https://wikipediamcpserver.onrender.com/info
+
+# Test MCP RPC endpoint
+curl -X POST https://wikipediamcpserver.onrender.com/mcp/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
 ##### Option 2: Deploy Your Own Instance on Render
@@ -967,6 +986,13 @@ The application uses several configuration approaches:
 
 This project follows semantic versioning and includes tagged releases:
 
+- **v8.2** - Remote MCP Support - HTTP RPC endpoint for remote access (198 tests)
+  - Added `/mcp/rpc` endpoint for remote MCP access via HTTP POST
+  - Dual transport support: stdio (local) + HTTP RPC (remote) simultaneously
+  - Updated mcp-http-bridge.js with HTTP/HTTPS protocol support
+  - Comprehensive documentation in REMOTE_MCP_SETUP.md
+  - Same Wikipedia service logic shared between local and remote modes
+  - Production-ready deployment on Render with JSON-RPC 2.0 over HTTP
 - **v8.1** - VS Code MCP Integration Fix - JSON-RPC 2.0 stdio compliance (206 tests)
   - Fixed stdio mode JSON formatting for VS Code MCP client compatibility
   - Added parameter name compatibility (snake_case and camelCase)
