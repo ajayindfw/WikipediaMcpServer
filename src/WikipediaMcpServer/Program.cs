@@ -85,7 +85,7 @@ builder.Services.AddMcpServer()
     {
         c.SwaggerDoc("v1", new() { 
             Title = "Wikipedia MCP Server API", 
-            Version = "v8.0",
+            Version = "v8.1",
             Description = "A Model Context Protocol (MCP) server for Wikipedia search and content retrieval - Built with Official Microsoft ModelContextProtocol SDK"
         });
     });
@@ -151,7 +151,7 @@ builder.Services.AddMcpServer()
     // Add an info endpoint with API information
     app.MapGet("/info", () => new { 
         name = "Wikipedia MCP Server", 
-        version = "v8.0",
+        version = "v8.1",
         status = "running",
         framework = "Microsoft ModelContextProtocol v0.4.0-preview.2",
         endpoints = new {
@@ -162,7 +162,7 @@ builder.Services.AddMcpServer()
         }
     });
 
-    Console.WriteLine("🚀 Wikipedia MCP Server v8.0");
+    Console.WriteLine("🚀 Wikipedia MCP Server v8.1");
     Console.WriteLine("📊 Available at: http://localhost:5070");
     Console.WriteLine("🔧 Endpoints:");
     Console.WriteLine("   POST / - Main MCP JSON-RPC endpoint (via Microsoft SDK)");  
@@ -267,7 +267,7 @@ static Task<string> HandleInitialize(JsonElement request)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
     // Use compact single-line JSON for stdio mode (required by JSON-RPC 2.0 spec)
-    var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{{\"tools\":{{}}}},\"serverInfo\":{{\"name\":\"Wikipedia MCP Server\",\"version\":\"8.0.0\"}}}}}}";
+    var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{{\"tools\":{{}}}},\"serverInfo\":{{\"name\":\"Wikipedia MCP Server\",\"version\":\"8.1.0\"}}}}}}";
     return Task.FromResult(response);
 }
 

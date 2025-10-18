@@ -8,7 +8,7 @@ services:
       dotnet restore src/WikipediaMcpServer/WikipediaMcpServer.csproj
       dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore
     startCommand: dotnet ./publish/WikipediaMcpServer.dll
-    healthCheckPath: /api/wikipedia/health
+    healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
