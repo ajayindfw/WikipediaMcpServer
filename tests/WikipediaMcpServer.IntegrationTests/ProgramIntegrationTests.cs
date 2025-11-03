@@ -209,7 +209,6 @@ public class ProgramMcpConfigurationTests
         // - ConsoleLoggerOptions with LogToStandardErrorThreshold = LogLevel.Trace
         // - HttpClient<IWikipediaService, WikipediaService>
         // - IWikipediaService as Scoped
-        // - McpServerService as HostedService
     }
 
     [Fact]

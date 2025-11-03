@@ -27,6 +27,105 @@
 				"$msCompile"
 			],
 			"group": "test"
+		},
+		{
+			"label": "Run Unit Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"tests/WikipediaMcpServer.UnitTests/"
+			],
+			"group": "test",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Run Service Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"tests/WikipediaMcpServer.ServiceTests/"
+			],
+			"group": "test",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Run Integration Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"tests/WikipediaMcpServer.IntegrationTests/"
+			],
+			"group": "test",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Run Stdio Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"tests/WikipediaMcpServer.StdioTests/"
+			],
+			"group": "test",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Run All Tests",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test"
+			],
+			"group": "test",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "Test All Verbose",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"--verbosity",
+				"normal"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Unit Tests Detailed",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"test",
+				"tests/WikipediaMcpServer.UnitTests/",
+				"--verbosity",
+				"normal",
+				"--logger",
+				"console;verbosity=detailed"
+			],
+			"group": "test"
 		}
 	]
 }

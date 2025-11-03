@@ -5,6 +5,28 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WikipediaMcpServer.Services;
 
+/// <summary>
+/// LEGACY: Custom MCP Server Implementation
+/// 
+/// This class represents the original custom implementation of the MCP protocol
+/// before migrating to the Microsoft ModelContextProtocol SDK in v8.1+.
+/// 
+/// STATUS: Not currently used in runtime - kept for reference and testing
+/// CURRENT: The application now uses Microsoft.ModelContextProtocol.Server with WikipediaTools
+/// 
+/// This implementation demonstrates:
+/// - Manual JSON-RPC 2.0 protocol handling
+/// - Custom BackgroundService architecture  
+/// - Direct stdin/stdout communication patterns
+/// - Service-based MCP tool orchestration
+/// 
+/// The service tests for this class remain valuable for:
+/// - Understanding MCP protocol requirements
+/// - Validating JSON-RPC compliance
+/// - Testing alternative architecture patterns
+/// - Providing fallback implementation reference
+/// </summary>
+
 public class McpServerService : BackgroundService
 {
     private readonly ILogger<McpServerService> _logger;

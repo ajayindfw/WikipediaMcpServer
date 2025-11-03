@@ -10,6 +10,22 @@ using System.Reflection;
 
 namespace WikipediaMcpServer.ServiceTests.Services;
 
+/// <summary>
+/// Tests for McpServerService - LEGACY custom MCP implementation
+/// 
+/// IMPORTANT: These tests validate the legacy McpServerService which is no longer
+/// used in the current runtime. The application now uses Microsoft.ModelContextProtocol.Server
+/// with WikipediaTools for MCP protocol handling.
+/// 
+/// These tests remain valuable for:
+/// - Understanding MCP protocol requirements and JSON-RPC 2.0 compliance
+/// - Validating alternative architecture patterns 
+/// - Providing reference implementation testing approaches
+/// - Maintaining knowledge of custom MCP protocol implementation
+/// 
+/// Current active MCP implementation: src/WikipediaMcpServer/Tools/WikipediaTools.cs
+/// </summary>
+
 public class McpServerServiceTests
 {
     private readonly Mock<ILogger<McpServerService>> _mockLogger;

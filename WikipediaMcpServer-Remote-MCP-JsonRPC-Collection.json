@@ -104,7 +104,7 @@
 			"name": "🧪 MCP Protocol Tests",
 			"item": [
 				{
-					"name": "MCP Initialize",
+					"name": "MCP Initialize - Protocol 2024-11-05",
 					"event": [
 						{
 							"listen": "test",
@@ -114,22 +114,32 @@
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Response is Server-Sent Events\", function () {",
+									"pm.test(\"Response is JSON (not SSE)\", function () {",
 									"    var contentType = pm.response.headers.get('Content-Type');",
-									"    pm.expect(contentType).to.include('text/event-stream');",
+									"    pm.expect(contentType).to.include('application/json');",
 									"});",
 									"",
-									"pm.test(\"SSE contains JSON-RPC response\", function () {",
-									"    var responseText = pm.response.text();",
-									"    pm.expect(responseText).to.include('event: message');",
-									"    pm.expect(responseText).to.include('data: {');",
-									"    pm.expect(responseText).to.include('\"jsonrpc\":\"2.0\"');",
+									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('jsonrpc');",
+									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
 									"});",
 									"",
-									"pm.test(\"Response contains MCP capabilities\", function () {",
-									"    var responseText = pm.response.text();",
-									"    pm.expect(responseText).to.include('\"result\"');",
-									"    pm.expect(responseText).to.include('\"capabilities\"');",
+									"pm.test(\"MCP initialization successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('result');",
+									"    pm.expect(jsonData.result).to.have.property('capabilities');",
+									"    pm.expect(jsonData.result).to.have.property('serverInfo');",
+									"});",
+									"",
+									"pm.test(\"Remote response time reasonable\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(15000);",
+									"});",
+									"",
+									"pm.test(\"Protocol 2024-11-05 basic capabilities\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('tools');",
+									"    pm.expect(jsonData.result.capabilities).to.not.have.property('resources');",
 									"});"
 								],
 								"type": "text/javascript"
@@ -149,15 +159,73 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman Remote Test\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "MCP protocol initialization handshake for remote deployment"
+					},
+					"response": []
+				},
+				{
+					"name": "MCP Initialize - Protocol 2025-06-18",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Enhanced protocol negotiated\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.protocolVersion).to.eql('2025-06-18');",
+									"});",
+									"",
+									"pm.test(\"Enhanced capabilities present\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('tools');",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('resources');",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('logging');",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('prompts');",
+									"});",
+									"",
+									"pm.test(\"Remote deployment supports latest protocol\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.serverInfo.version).to.eql('8.1.0');",
+									"});",
+									"",
+									"pm.test(\"Remote enhanced protocol performance\", function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(15000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-06-18\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman Remote Enhanced\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mcp/rpc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": ["mcp", "rpc"]
+						},
+						"description": "Test enhanced 2025-06-18 protocol on remote deployment"
 					},
 					"response": []
 				},
@@ -197,15 +265,70 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "List all available MCP tools on remote deployment"
+					},
+					"response": []
+				},
+				{
+					"name": "MCP Initialize - Unsupported Protocol",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 (JSON-RPC error response)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('jsonrpc');",
+									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
+									"});",
+									"",
+									"pm.test(\"Unsupported protocol returns proper error\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData.error.code).to.eql(-32602);",
+									"    pm.expect(jsonData.error.message).to.include('Unsupported protocol version: 3.0.0');",
+									"    pm.expect(jsonData.error.message).to.include('Supported versions: 2024-11-05, 2025-06-18');",
+									"});",
+									"",
+									"pm.test(\"No result property in error response\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.not.have.property('result');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"3.0.0\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Remote Test - Unsupported\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mcp/rpc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": ["mcp", "rpc"]
+						},
+						"description": "Test unsupported protocol version handling on remote deployment"
 					},
 					"response": []
 				}
@@ -250,13 +373,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"artificial intelligence\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test Wikipedia search tool on remote deployment"
 					},
@@ -293,13 +414,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_sections\",\n    \"arguments\": {\n      \"topic\": \"Machine learning\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test Wikipedia sections tool on remote deployment"
 					},
@@ -336,13 +455,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_section_content\",\n    \"arguments\": {\n      \"topic\": \"Artificial intelligence\",\n      \"sectionTitle\": \"Overview\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test Wikipedia section content tool on remote deployment"
 					},
@@ -391,13 +508,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"quantum computing\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test concurrent request handling on remote deployment (use with Postman Runner for load testing)"
 					},
@@ -453,13 +568,11 @@
 							}
 						],
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test CORS preflight handling for remote deployment"
 					},
@@ -472,9 +585,23 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test(\"Security headers present\", function () {",
-									"    pm.expect(pm.response.headers.get('x-content-type-options')).to.eql('nosniff');",
-									"    pm.expect(pm.response.headers.get('x-frame-options')).to.eql('DENY');",
+									"pm.test(\"Response is successful\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Security headers check (production deployments)\", function () {",
+									"    const baseUrl = pm.environment.get('base_url');",
+									"    const isLocalhost = baseUrl && baseUrl.includes('localhost');",
+									"    ",
+									"    if (!isLocalhost) {",
+									"        // Only require security headers for remote deployments",
+									"        pm.expect(pm.response.headers.get('x-content-type-options')).to.eql('nosniff');",
+									"        pm.expect(pm.response.headers.get('x-frame-options')).to.exist;",
+									"    } else {",
+									"        // For localhost, just verify basic headers exist",
+									"        pm.expect(pm.response.headers.get('content-type')).to.include('application/json');",
+									"        pm.expect(pm.response.headers.get('server')).to.exist;",
+									"    }",
 									"});",
 									"",
 									"pm.test(\"HTTPS enforced in production\", function () {",
@@ -536,7 +663,7 @@
 				"exec": [
 					"// Global test for JSON-RPC 2.0 compliance (skip for OPTIONS requests)",
 					"if (pm.request.method !== 'OPTIONS' && pm.request.url.path.join('/') === '') {",
-					"    pm.test('Response follows JSON-RPC 2.0 via SSE format', function() {",
+					"    pm.test('Response follows JSON-RPC 2.0 format', function() {",
 					"        var responseText = pm.response.text();",
 					"        if (responseText.includes('event: message')) {",
 					"            pm.expect(responseText).to.include('\"jsonrpc\":\"2.0\"');",

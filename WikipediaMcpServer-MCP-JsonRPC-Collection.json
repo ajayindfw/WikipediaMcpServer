@@ -40,13 +40,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/health",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"health"
-							]
+							"raw": "{{base_url}}/health","host": ["{{base_url}}"],"path": ["health"]
 						},
 						"description": "Health check endpoint to verify the server is running"
 					},
@@ -68,7 +62,15 @@
 									"    pm.expect(jsonData).to.have.property('name');",
 									"    pm.expect(jsonData).to.have.property('version');",
 									"    pm.expect(jsonData).to.have.property('framework');",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"});",
+									"",
+									"pm.test(\"Server details are correct\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.name).to.include('Wikipedia MCP Server');",
+									"    pm.expect(jsonData.version).to.eql('v8.1');",
 									"    pm.expect(jsonData.framework).to.include('Microsoft ModelContextProtocol');",
+									"    pm.expect(jsonData.status).to.eql('running');",
 									"});"
 								],
 								"type": "text/javascript"
@@ -79,13 +81,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/info",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"info"
-							]
+							"raw": "{{base_url}}/info","host": ["{{base_url}}"],"path": ["info"]
 						},
 						"description": "Server information endpoint showing MCP server details"
 					},
@@ -98,49 +94,45 @@
 			"name": "MCP Protocol Tests",
 			"item": [
 				{
-					"name": "MCP Initialize",
+					"name": "MCP Initialize - Protocol 2024-11-05",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
-									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
-									"pm.test(\"Response is SSE format\", function () {",
-									"    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/event-stream');",
+									"pm.test(\"Response is JSON format\", function () {",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
 									"});",
 									"",
 									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('jsonrpc');",
 									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
 									"});",
 									"",
 									"pm.test(\"Response has correct ID\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('id');",
 									"    pm.expect(jsonData.id).to.eql(1);",
 									"});",
 									"",
 									"pm.test(\"Response has result with capabilities\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('result');",
 									"    pm.expect(jsonData.result).to.have.property('capabilities');",
 									"    pm.expect(jsonData.result).to.have.property('serverInfo');",
+									"});",
+									"",
+									"pm.test(\"Protocol 2024-11-05 has basic tools capability only\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('tools');",
+									"    pm.expect(jsonData.result.capabilities).to.not.have.property('resources');",
+									"    pm.expect(jsonData.result.capabilities).to.not.have.property('logging');",
+									"    pm.expect(jsonData.result.capabilities).to.not.have.property('prompts');",
 									"});"
 								],
 								"type": "text/javascript"
@@ -160,15 +152,177 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
-						"description": "MCP protocol initialization handshake"
+						"description": "MCP protocol initialization handshake with legacy protocol version"
+					},
+					"response": []
+				},
+				{
+					"name": "MCP Initialize - Protocol 2025-06-18",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('jsonrpc');",
+									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
+									"});",
+									"",
+									"pm.test(\"Protocol version negotiated correctly\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.protocolVersion).to.eql('2025-06-18');",
+									"});",
+									"",
+									"pm.test(\"Enhanced capabilities for 2025-06-18\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('tools');",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('resources');",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('logging');",
+									"    pm.expect(jsonData.result.capabilities).to.have.property('prompts');",
+									"});",
+									"",
+									"pm.test(\"Server info contains correct details\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.result.serverInfo.name).to.include('wikipedia-mcp-dotnet-server');",
+									"    pm.expect(jsonData.result.serverInfo.version).to.eql('8.1.0');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-06-18\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman Enhanced\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mcp/rpc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": ["mcp", "rpc"]
+						},
+						"description": "MCP protocol initialization with enhanced 2025-06-18 version"
+					},
+					"response": []
+				},
+				{
+					"name": "MCP Initialize - Unsupported Protocol",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 (JSON-RPC error response)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('jsonrpc');",
+									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
+									"});",
+									"",
+									"pm.test(\"Unsupported protocol returns error\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('error');",
+									"    pm.expect(jsonData.error.code).to.eql(-32602);",
+									"    pm.expect(jsonData.error.message).to.include('Unsupported protocol version: 3.0.0');",
+									"    pm.expect(jsonData.error.message).to.include('Supported versions: 2024-11-05, 2025-06-18');",
+									"});",
+									"",
+									"pm.test(\"No result property in error response\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.not.have.property('result');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"3.0.0\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"Postman Test\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mcp/rpc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": ["mcp", "rpc"]
+						},
+						"description": "Test unsupported protocol version handling"
+					},
+					"response": []
+				},
+				{
+					"name": "MCP Initialize - Missing Client Info",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Missing clientInfo handled gracefully\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    // Should either succeed or return proper error",
+									"    if (jsonData.error) {",
+									"        pm.expect(jsonData.error.code).to.be.oneOf([-32602, -32600]);",
+									"    } else {",
+									"        pm.expect(jsonData).to.have.property('result');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {}\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/mcp/rpc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": ["mcp", "rpc"]
+						},
+						"description": "Test initialize with missing clientInfo field"
 					},
 					"response": []
 				},
@@ -179,37 +333,29 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
+									"    ",
 									"    pm.expect(jsonData).to.have.property('jsonrpc');",
 									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
 									"});",
 									"",
 									"pm.test(\"Response has tools array\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('result');",
 									"    pm.expect(jsonData.result).to.have.property('tools');",
 									"    pm.expect(jsonData.result.tools).to.be.an('array');",
 									"});",
 									"",
 									"pm.test(\"Wikipedia tools are present\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    var toolNames = jsonData.result.tools.map(tool => tool.name);",
 									"    pm.expect(toolNames).to.include('wikipedia_search');",
 									"    pm.expect(toolNames).to.include('wikipedia_sections');",
@@ -233,13 +379,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "List all available MCP tools"
 					},
@@ -258,37 +402,29 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
+									"    ",
 									"    pm.expect(jsonData).to.have.property('jsonrpc');",
 									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
 									"});",
 									"",
 									"pm.test(\"Response has search result content\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData).to.have.property('result');",
 									"    pm.expect(jsonData.result).to.have.property('content');",
 									"    pm.expect(jsonData.result.content[0].text).to.include('Artificial');",
 									"});",
 									"",
 									"pm.test(\"Search result contains Wikipedia URL\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData.result.content[0].text).to.include('wikipedia.org');",
 									"});"
 								],
@@ -309,13 +445,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"Artificial intelligence\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Search Wikipedia for 'Artificial intelligence' using MCP tools/call"
 					},
@@ -328,23 +462,15 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response contains Python content\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData.result.content[0].text.toLowerCase()).to.include('python');",
 									"});"
 								],
@@ -365,13 +491,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"Python programming language\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Search Wikipedia for Python programming language"
 					},
@@ -384,24 +508,16 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200 (JSON-RPC error in response)\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response contains error or no results message\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
+									"    ",
 									"    // Could be an error field or a result with \"No Wikipedia articles found\"",
 									"    var hasError = jsonData.error || (jsonData.result && jsonData.result.content[0].text.includes('No Wikipedia articles found'));",
 									"    pm.expect(hasError).to.be.true;",
@@ -424,13 +540,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_search\",\n    \"arguments\": {\n      \"query\": \"\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test error handling for empty search query"
 					},
@@ -449,30 +563,22 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response is JSON-RPC 2.0\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
+									"    ",
 									"    pm.expect(jsonData).to.have.property('jsonrpc');",
 									"    pm.expect(jsonData.jsonrpc).to.eql('2.0');",
 									"});",
 									"",
 									"pm.test(\"Response contains sections\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
+									"    var jsonData = pm.response.json();",
 									"    pm.expect(jsonData.result.content[0].text).to.include('sections');",
 									"    pm.expect(jsonData.result.content[0].text).to.include('Machine learning');",
 									"});"
@@ -494,13 +600,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_sections\",\n    \"arguments\": {\n      \"topic\": \"Machine learning\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Get sections for Machine learning Wikipedia page"
 					},
@@ -521,13 +625,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 7,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_sections\",\n    \"arguments\": {\n      \"topic\": \"Artificial intelligence\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Get sections for Artificial intelligence Wikipedia page"
 					},
@@ -546,24 +648,16 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response contains section content\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
+									"    ",
 									"    pm.expect(jsonData.result.content[0].text).to.include('Content from section');",
 									"    pm.expect(jsonData.result.content[0].text).to.include('Overview');",
 									"});"
@@ -585,13 +679,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 8,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_section_content\",\n    \"arguments\": {\n      \"topic\": \"Artificial intelligence\",\n      \"sectionTitle\": \"Overview\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Get Overview section content from Artificial intelligence page"
 					},
@@ -612,13 +704,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 9,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_section_content\",\n    \"arguments\": {\n      \"topic\": \"Python (programming language)\",\n      \"sectionTitle\": \"History\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Get History section content from Python programming language page"
 					},
@@ -631,24 +721,16 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"// Helper function to parse SSE format responses",
-									"function parseSSE(responseText) {",
-									"    const lines = responseText.split('\\n');",
-									"    for (let line of lines) {",
-									"        if (line.startsWith('data: ')) {",
-									"            return JSON.parse(line.substring(6));",
-									"        }",
-									"    }",
-									"    return null;",
-									"}",
+									"",
+									"    }","}",
 									"",
 									"pm.test(\"Status code is 200\", function () {",
 									"    pm.response.to.have.status(200);",
 									"});",
 									"",
 									"pm.test(\"Response indicates section not found\", function () {",
-									"    var jsonData = parseSSE(pm.response.text());",
-									"    pm.expect(jsonData).to.not.be.null;",
+									"    var jsonData = pm.response.json();",
+									"    ",
 									"    pm.expect(jsonData.result.content[0].text.toLowerCase()).to.include('not found');",
 									"});"
 								],
@@ -669,13 +751,11 @@
 							"raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 10,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"wikipedia_section_content\",\n    \"arguments\": {\n      \"topic\": \"Python (programming language)\",\n      \"sectionTitle\": \"NonexistentSection12345\"\n    }\n  }\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/mcp/rpc",
 							"host": [
 								"{{base_url}}"
 							],
-							"path": [
-								""
-							]
+							"path": ["mcp", "rpc"]
 						},
 						"description": "Test behavior when requesting a section that doesn't exist"
 					},
@@ -715,13 +795,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/health",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"health"
-							]
+							"raw": "{{base_url}}/health","host": ["{{base_url}}"],"path": ["health"]
 						},
 						"description": "Placeholder for complete MCP workflow testing. Run the individual JSON-RPC requests in sequence to test the full MCP protocol flow."
 					},

@@ -1,0 +1,34 @@
+{
+    // .NET Test Explorer Configuration
+    "dotnet-test-explorer.testProjectPath": "tests/**/*.csproj",
+    "dotnet-test-explorer.useTreeView": true,
+    "dotnet-test-explorer.showCodeLens": true,
+    "dotnet-test-explorer.codeLens": true,
+    "dotnet-test-explorer.autoExpandTree": true,
+    "dotnet-test-explorer.autoWatch": false,
+    "dotnet-test-explorer.enableTelemetry": false,
+    "csharp.format.enable": true,
+    "csharp.semanticHighlighting.enabled": true,
+    
+    // Test Explorer UI
+    "testExplorer.useNativeTesting": true,
+    "testExplorer.gutterDecoration": true,
+    "testExplorer.codeLens": true,
+    "testExplorer.showCollapseButton": true,
+    "testExplorer.showExpandButton": true,
+    
+    // File exclusions to improve performance
+    "files.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/.vs": true
+    },
+    
+    // Search configuration
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true,
+        "**/node_modules": true
+    },
+    "dotnet.codeLens.enableTestsCodeLens": true
+}

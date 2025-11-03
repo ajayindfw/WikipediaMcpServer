@@ -100,12 +100,28 @@ public class McpServerCapabilities
 {
     [JsonPropertyName("tools")]
     public McpToolsCapability Tools { get; set; } = new();
+    
+    [JsonPropertyName("resources")]
+    public McpResourcesCapability Resources { get; set; } = new();
+    
+    [JsonPropertyName("logging")]
+    public McpLoggingCapability Logging { get; set; } = new();
 }
 
 public class McpToolsCapability
 {
     [JsonPropertyName("listChanged")]
     public bool ListChanged { get; set; } = false;
+}
+
+public class McpResourcesCapability
+{
+    // Basic resource support capability - can be extended with specific resource features
+}
+
+public class McpLoggingCapability
+{
+    // Basic logging support capability - can be extended with specific logging features
 }
 
 public class McpServerInfo

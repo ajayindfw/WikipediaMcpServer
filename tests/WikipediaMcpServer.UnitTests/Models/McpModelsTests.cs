@@ -230,6 +230,8 @@ public class McpModelsTests
         // Assert
         capabilities.Tools.Should().NotBeNull();
         capabilities.Tools.ListChanged.Should().BeFalse();
+        capabilities.Resources.Should().NotBeNull();
+        capabilities.Logging.Should().NotBeNull();
     }
 
     [Fact]
@@ -243,6 +245,21 @@ public class McpModelsTests
 
         // Assert
         capability.ListChanged.Should().BeTrue();
+    }
+
+    [Fact]
+    public void McpServerCapabilities_ShouldDeclareEnhancedCapabilities()
+    {
+        // Arrange & Act
+        var capabilities = new McpServerCapabilities();
+
+        // Assert
+        capabilities.Tools.Should().NotBeNull("Tools capability should be declared");
+        capabilities.Resources.Should().NotBeNull("Resources capability should be declared");
+        capabilities.Logging.Should().NotBeNull("Logging capability should be declared");
+        
+        // Verify default values
+        capabilities.Tools.ListChanged.Should().BeFalse("Tools list should not indicate dynamic changes by default");
     }
 
     [Fact]
