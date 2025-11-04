@@ -33,6 +33,13 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+# Debug: Show what files are actually in the container
+RUN echo "========== FILES IN /app =========="
+RUN ls -la /app/
+RUN echo "========== LOOKING FOR WikipediaMcpServer.dll =========="
+RUN find /app -name "*.dll" -type f
+RUN echo "========== END DEBUG =========="
+
 # Set environment variables for Railway production deployment
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://0.0.0.0:$PORT
