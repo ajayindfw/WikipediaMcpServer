@@ -245,9 +245,10 @@ You can deploy your own instance to Render by:
 **Automatic Configuration Features:**
 - Uses `railway.json` with Dockerfile builder for reliable builds
 - Uses official Microsoft .NET 8 Docker images (no third-party dependencies)
-- Includes health checks, restart policies, and optimized environment variables
+- Includes health checks (`/railway-health` endpoint), restart policies, and optimized environment variables
 - Compatible with `global.json` SDK version requirements
 - Automatic builds and deployments on git push
+- Explicit start command to ensure proper container execution
 
 **Configuration Files:**
 - `railway.json` - Main deployment configuration with Dockerfile builder
@@ -258,6 +259,8 @@ You can deploy your own instance to Render by:
 **Manual Configuration (if not using railway.json):**
 - Builder: Select "Dockerfile"
 - Dockerfile Path: `Dockerfile` (default)
+- Start Command: `dotnet WikipediaMcpServer.dll`
+- Health Check Path: `/railway-health`
 - Environment Variables:
   - `ASPNETCORE_ENVIRONMENT=Production`
   - `ASPNETCORE_URLS=http://0.0.0.0:$PORT`

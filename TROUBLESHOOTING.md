@@ -495,15 +495,65 @@ If you're still experiencing issues, collect this information:
    - Health check response
    - Build/test output
 
+### Railway Deployment Issues
+
+If you encounter issues deploying to Railway:
+
+#### SDK Not Found Errors
+
+```text
+Error: .NET SDK not found
+```
+
+**Solution**: Use Dockerfile builder instead of Nixpacks:
+
+1. Ensure `railway.json` specifies `"builder": "dockerfile"`
+2. Remove or rename `nixpacks.toml` to avoid conflicts
+3. Verify your `Dockerfile` uses official Microsoft images
+
+#### Health Check Failures
+
+```text
+Health check failed: connection refused
+```
+
+**Solution**: Configure Railway-specific health endpoint:
+
+1. Railway health check uses `/railway-health` endpoint
+2. Ensure `ASPNETCORE_URLS=http://0.0.0.0:$PORT` in environment
+3. Remove any hardcoded Kestrel endpoints from `appsettings.json`
+4. Add `healthcheck.railway.app` to `AllowedHosts`
+
+#### Start Command Issues
+
+```text
+Application failed to start
+```
+
+**Solution**: Use explicit start command in `railway.json`:
+
+```json
+{
+  "build": {
+    "builder": "dockerfile"
+  },
+  "deploy": {
+    "startCommand": "dotnet WikipediaMcpServer.dll",
+    "healthcheckPath": "/railway-health"
+  }
+}
+```
+
 ### Common Resolution Patterns
 
 Most issues fall into these categories:
 
-1. **Path Issues** (40%): Incorrect absolute paths in `mcp.json`
-2. **Process Issues** (25%): Multiple servers running or zombie processes
-3. **Configuration Issues** (20%): Missing `--mcp` flag or JSON syntax errors
-4. **Environment Issues** (10%): Wrong .NET version or missing dependencies
-5. **Network Issues** (5%): Port conflicts or firewall issues
+1. **Path Issues** (35%): Incorrect absolute paths in `mcp.json`
+2. **Process Issues** (20%): Multiple servers running or zombie processes
+3. **Configuration Issues** (15%): Missing `--mcp` flag or JSON syntax errors
+4. **Deployment Issues** (15%): Railway/Render configuration problems
+5. **Environment Issues** (10%): Wrong .NET version or missing dependencies
+6. **Network Issues** (5%): Port conflicts or firewall issues
 
 ### Reset Everything
 
