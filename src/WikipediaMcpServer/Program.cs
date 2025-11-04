@@ -249,6 +249,12 @@ if (!isStdioMode)
         }
     });
 
+    // Railway-specific minimal health check for platform compliance
+    app.MapGet("/railway-health", () => Results.Ok("OK"))
+        .WithTags("Health")
+        .WithSummary("Railway platform health check")
+        .WithDescription("Simple health check endpoint specifically for Railway platform - returns immediate HTTP 200");
+
     // Add health check endpoint with JSON response
     app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
     {
@@ -298,7 +304,8 @@ if (!isStdioMode)
     Console.WriteLine("🔧 Endpoints:");
     Console.WriteLine("   POST /mcp/rpc - MCP-compliant JSON-RPC endpoint (HTTP transport)");
     Console.WriteLine("   POST /mcp - Microsoft MCP SDK endpoint (SSE/WebSocket)");
-    Console.WriteLine("   GET  /health - Health check");
+    Console.WriteLine("   GET  /health - Comprehensive health check (JSON)");
+    Console.WriteLine("   GET  /railway-health - Railway platform health check");
     Console.WriteLine("   GET  /info - Server info");
     Console.WriteLine("   GET  /swagger - API documentation");
     Console.WriteLine();
