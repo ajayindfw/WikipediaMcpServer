@@ -31,6 +31,9 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+# List files for debugging (Railway logs will show this)
+RUN ls -la /app/
+
 # Set environment variables for Railway production deployment
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://0.0.0.0:$PORT
