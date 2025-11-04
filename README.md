@@ -169,7 +169,7 @@ dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj
 The server will start on `http://localhost:5070` by default.
 
 **Use HTTP mode for:**
-- 🌐 Remote deployments (Render, Azure, AWS)
+- 🌐 Remote deployments (Render, Railway, Azure, AWS)
 - 🧪 Postman API testing
 - 🔗 HTTP-based integrations
 - 📊 Load testing and monitoring
@@ -231,6 +231,40 @@ You can deploy your own instance to Render by:
 **Manual Configuration (if not using render.yaml):**
 - Build Command: `dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o out`
 - Start Command: `dotnet out/WikipediaMcpServer.dll`
+
+##### Option 3: Deploy Your Own Instance on Railway
+
+[Railway](https://railway.com) provides an excellent alternative deployment platform with zero-configuration setup:
+
+1. **Fork this repository** to your GitHub account
+2. **Create a new Project** on [Railway](https://railway.com)
+3. **Connect your GitHub repository** to Railway
+4. **Deploy automatically** using `railway.json` configuration
+5. **Zero configuration required** - Railway detects .NET projects automatically!
+
+**Automatic Configuration Features:**
+- Uses `railway.json` with JSON schema validation
+- Uses `nixpacks.toml` for .NET 8 environment setup
+- Includes health checks, restart policies, and optimized environment variables
+- Compatible with `global.json` SDK version requirements
+- Automatic builds and deployments on git push
+
+**Configuration Files:**
+- `railway.json` - Main deployment configuration with schema validation
+- `nixpacks.toml` - .NET 8 build environment and variable configuration
+- `global.json` - .NET SDK version consistency across environments
+
+**Manual Configuration (if not using railway.json):**
+- Builder: Select "Nixpacks"
+- Build Command: `dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore`
+- Start Command: `dotnet ./publish/WikipediaMcpServer.dll`
+- Environment Variables:
+  - `ASPNETCORE_ENVIRONMENT=Production`
+  - `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
+  - `MCP_MODE=false`
+  - `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false`
+
+##### Option 4: Other Cloud Platforms
 - Environment: Select ".NET"
 - Add environment variables in Render dashboard
 

@@ -197,6 +197,35 @@ curl -X POST https://wikipediamcpserver.onrender.com/mcp/rpc \
 - Environment: Select ".NET"
 - Add environment variable: `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
 
+### Deploy Your Own Instance on Railway
+
+1. **Fork this repository** to your GitHub account
+2. **Create a new Project** on [Railway](https://railway.com)
+3. **Connect your GitHub repository** to Railway
+4. **Use automatic configuration** via `railway.json`
+5. **Deploy** with zero configuration!
+
+**Automatic Configuration Features:**
+- Uses `railway.json` for build and deploy settings
+- Uses `nixpacks.toml` for .NET 8 environment setup
+- Includes health checks, restart policies, and environment variables
+- Compatible with `global.json` SDK version requirements
+
+**Manual Configuration (if not using railway.json):**
+- Builder: Select "Nixpacks"
+- Build Command: `dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore`
+- Start Command: `dotnet ./publish/WikipediaMcpServer.dll`
+- Add environment variables:
+  - `ASPNETCORE_ENVIRONMENT=Production`
+  - `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
+  - `MCP_MODE=false`
+  - `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false`
+
+**Railway Configuration Files:**
+- `railway.json` - Main deployment configuration with schema validation
+- `nixpacks.toml` - .NET 8 build environment configuration
+- `global.json` - .NET SDK version consistency
+
 ### Remote MCP Client Configuration
 
 Since MCP clients expect stdio communication, use the bridge script to convert HTTP requests:
