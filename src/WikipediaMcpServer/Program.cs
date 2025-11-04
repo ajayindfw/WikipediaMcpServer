@@ -47,9 +47,16 @@ builder.Services.AddSingleton<IWikipediaService, WikipediaService>();
 // - HTTP transport: Enabled via WithHttpTransport() - for remote access
 // - stdio transport: Automatically available when run with --mcp flag
 // When VS Code or Claude Desktop runs with --mcp, SDK uses stdio automatically
-builder.Services.AddMcpServer()
-    .WithHttpTransport()   // Enable HTTP for remote access and testing
-    .WithTools<WikipediaTools>();
+
+// IMPORTANT: Only add MCP SDK for HTTP mode to avoid stdio conflicts
+// In stdio mode, we use our custom implementation (RunStdioModeAsync) 
+// to prevent message parsing collisions between SDK and custom handler
+if (!isStdioMode)
+{
+    builder.Services.AddMcpServer()
+        .WithHttpTransport()   // Enable HTTP for remote access and testing
+        .WithTools<WikipediaTools>();
+}
 
 
     // Add CORS support
@@ -153,7 +160,7 @@ builder.Services.AddMcpServer()
             using var reader = new StreamReader(context.Request.Body);
             var requestBody = await reader.ReadToEndAsync();
             
-            Console.WriteLine($"📥 MCP HTTP Request: {requestBody.Substring(0, Math.Min(100, requestBody.Length))}...");
+            Console.WriteLine($"{ConsoleColors.RequestBlue}{ConsoleColors.Bold}📥 MCP HTTP Request:{ConsoleColors.Reset} {ConsoleColors.RequestCyan}{requestBody.Substring(0, Math.Min(100, requestBody.Length))}...{ConsoleColors.Reset}");
             
             // Parse JSON-RPC request
             var jsonDoc = JsonDocument.Parse(requestBody);
@@ -179,7 +186,7 @@ builder.Services.AddMcpServer()
             }
             
             var methodName = method.GetString();
-            Console.WriteLine($"🎯 MCP Method: {methodName}");
+            Console.WriteLine($"{ConsoleColors.MethodMagenta}{ConsoleColors.Bold}🎯 MCP Method:{ConsoleColors.Reset} {ConsoleColors.InfoWhite}{methodName}{ConsoleColors.Reset}");
             
             // Handle different MCP methods with protocol version awareness
             var response = methodName switch
@@ -197,6 +204,7 @@ builder.Services.AddMcpServer()
             {
                 var statusCode = responseType.GetProperty("StatusCode")?.GetValue(response) as int? ?? 202;
                 context.Response.Headers["MCP-Protocol-Version"] = protocolVersion;
+                Console.WriteLine($"{ConsoleColors.NotificationYellow}{ConsoleColors.Bold}📤 Notification Response:{ConsoleColors.Reset} {ConsoleColors.NotificationOrange}HTTP {statusCode} (no body) - Protocol: {protocolVersion}{ConsoleColors.Reset}");
                 return Results.StatusCode(statusCode);
             }
             
@@ -204,26 +212,40 @@ builder.Services.AddMcpServer()
             context.Response.Headers["MCP-Protocol-Version"] = protocolVersion;
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             
-            Console.WriteLine($"📤 MCP HTTP Response sent (Protocol: {protocolVersion})");
+            // Log the actual response content for debugging
+            var responseJson = JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = false });
+            var truncatedResponse = responseJson.Length > 500 ? responseJson.Substring(0, 500) + "..." : responseJson;
+            Console.WriteLine($"{ConsoleColors.ResponseGreen}{ConsoleColors.Bold}📤 MCP HTTP Response:{ConsoleColors.Reset} {ConsoleColors.ResponseDarkGreen}{truncatedResponse}{ConsoleColors.Reset}");
+            Console.WriteLine($"{ConsoleColors.ResponseGreen}📤 Response sent (Protocol: {protocolVersion}, Length: {responseJson.Length} chars){ConsoleColors.Reset}");
             return Results.Json(response);
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"❌ JSON Parse Error: {ex.Message}");
-            return Results.Json(new { 
+            Console.WriteLine($"{ConsoleColors.ErrorRed}{ConsoleColors.Bold}❌ JSON Parse Error:{ConsoleColors.Reset} {ConsoleColors.ErrorDarkRed}{ex.Message}{ConsoleColors.Reset}");
+            var errorResponse = new { 
                 jsonrpc = "2.0", 
                 id = (object?)null, 
                 error = new { code = -32700, message = $"Parse error: {ex.Message}" }
-            });
+            };
+            
+            // Log error response content
+            var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions { WriteIndented = false });
+            Console.WriteLine($"{ConsoleColors.ErrorRed}{ConsoleColors.Bold}📤 Error Response:{ConsoleColors.Reset} {ConsoleColors.ErrorDarkRed}{errorJson}{ConsoleColors.Reset}");
+            return Results.Json(errorResponse);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ MCP HTTP Error: {ex.Message}");
-            return Results.Json(new { 
+            Console.WriteLine($"{ConsoleColors.ErrorRed}{ConsoleColors.Bold}❌ MCP HTTP Error:{ConsoleColors.Reset} {ConsoleColors.ErrorDarkRed}{ex.Message}{ConsoleColors.Reset}");
+            var errorResponse = new { 
                 jsonrpc = "2.0", 
                 id = (object?)null, 
                 error = new { code = -32603, message = $"Internal error: {ex.Message}" }
-            });
+            };
+            
+            // Log error response content
+            var errorJson = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions { WriteIndented = false });
+            Console.WriteLine($"{ConsoleColors.ErrorRed}{ConsoleColors.Bold}📤 Error Response:{ConsoleColors.Reset} {ConsoleColors.ErrorDarkRed}{errorJson}{ConsoleColors.Reset}");
+            return Results.Json(errorResponse);
         }
     });
 
@@ -311,15 +333,17 @@ static async Task RunStdioModeAsync()
     });
     services.AddSingleton<IWikipediaService, WikipediaService>();
     
-    // Add MCP server without HTTP transport
-    services.AddMcpServer()
-        .WithTools<WikipediaTools>();
+    // IMPORTANT: Do NOT add MCP SDK in stdio mode to avoid conflicts
+    // We use our custom stdio handler below instead of the Microsoft SDK
+    // services.AddMcpServer().WithTools<WikipediaTools>(); // REMOVED - causes parsing conflicts
     
-    // Add logging
+    // Add logging with MINIMAL output for stdio mode to prevent parse errors
     services.AddLogging(builder =>
     {
-        builder.AddConsole();
-        builder.SetMinimumLevel(LogLevel.Information);
+        // In stdio mode, suppress all console logging to prevent MCP parse errors
+        // VS Code MCP expects ONLY JSON-RPC messages on stdout/stderr
+        builder.ClearProviders(); // Remove all default providers
+        builder.SetMinimumLevel(LogLevel.None); // Suppress all logging
     });
     
     // Build service provider with validation for stdio mode
@@ -361,7 +385,7 @@ static async Task RunStdioModeAsync()
                 if (root.TryGetProperty("method", out var method))
                 {
                     var methodName = method.GetString();
-                    Console.Error.WriteLine($"🎯 Method: {methodName}");
+                    Console.Error.WriteLine($"{ConsoleColors.MethodMagenta}{ConsoleColors.Bold}🎯 Method:{ConsoleColors.Reset} {ConsoleColors.InfoWhite}{methodName}{ConsoleColors.Reset}");
                     
                     // Handle different MCP methods with full compliance
                     string response = methodName switch
@@ -379,8 +403,9 @@ static async Task RunStdioModeAsync()
                         await writer.WriteLineAsync(response);
                         
                         // Debug: Log the COMPLETE response sent to client
-                        Console.Error.WriteLine($"📤 REAL RESPONSE TO CLIENT: {response}");
-                        Console.Error.WriteLine($"📤 Sent response (truncated)");
+                        var truncatedResponse = response.Length > 500 ? response.Substring(0, 500) + "..." : response;
+                        Console.Error.WriteLine($"{ConsoleColors.ResponseGreen}{ConsoleColors.Bold}📤 STDIO Response:{ConsoleColors.Reset} {ConsoleColors.ResponseDarkGreen}{truncatedResponse}{ConsoleColors.Reset}");
+                        Console.Error.WriteLine($"{ConsoleColors.ResponseGreen}📤 Sent response (Length: {response.Length} chars){ConsoleColors.Reset}");
                     }
                 }
             }
@@ -910,6 +935,33 @@ static object CreateErrorResponseHttpCompliant(JsonElement request, int code, st
 
 // Make Program class accessible for integration tests
 public partial class Program { }
+
+// ANSI color codes for terminal output (color-blind friendly)
+public static class ConsoleColors
+{
+    public const string Reset = "\u001b[0m";
+    public const string Bold = "\u001b[1m";
+    
+    // Request colors (Blue theme - good contrast, color-blind safe)
+    public const string RequestBlue = "\u001b[94m";      // Bright blue
+    public const string RequestCyan = "\u001b[96m";      // Bright cyan
+    
+    // Response colors (Green theme - distinguishable from blue)
+    public const string ResponseGreen = "\u001b[92m";    // Bright green
+    public const string ResponseDarkGreen = "\u001b[32m"; // Dark green
+    
+    // Error colors (Red theme)
+    public const string ErrorRed = "\u001b[91m";         // Bright red
+    public const string ErrorDarkRed = "\u001b[31m";     // Dark red
+    
+    // Notification colors (Yellow/Orange theme)
+    public const string NotificationYellow = "\u001b[93m"; // Bright yellow
+    public const string NotificationOrange = "\u001b[38;5;208m"; // Orange
+    
+    // Method/Info colors (Magenta theme)
+    public const string MethodMagenta = "\u001b[95m";    // Bright magenta
+    public const string InfoWhite = "\u001b[97m";        // Bright white
+}
 
 // Helper class for tool definition
 class ToolDefinition
