@@ -492,3 +492,6 @@ http_output.txt
 
 # Blog posts and articles (not for public repo)
 blog_post_mcp_development.md
+
+# Windows-specific scripts (not needed for primary macOS development)
+*.bat
