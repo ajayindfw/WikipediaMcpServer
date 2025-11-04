@@ -243,21 +243,21 @@ You can deploy your own instance to Render by:
 5. **Zero configuration required** - Railway detects .NET projects automatically!
 
 **Automatic Configuration Features:**
-- Uses `railway.json` with JSON schema validation
-- Uses `nixpacks.toml` for .NET 8 environment setup
+- Uses `railway.json` with Dockerfile builder for reliable builds
+- Uses official Microsoft .NET 8 Docker images (no third-party dependencies)
 - Includes health checks, restart policies, and optimized environment variables
 - Compatible with `global.json` SDK version requirements
 - Automatic builds and deployments on git push
 
 **Configuration Files:**
-- `railway.json` - Main deployment configuration with schema validation
-- `nixpacks.toml` - .NET 8 build environment and variable configuration
+- `railway.json` - Main deployment configuration with Dockerfile builder
+- `Dockerfile` - Multi-stage build using official Microsoft .NET 8 images
+- `.dockerignore` - Optimized Docker build context for faster builds
 - `global.json` - .NET SDK version consistency across environments
 
 **Manual Configuration (if not using railway.json):**
-- Builder: Select "Nixpacks"
-- Build Command: `dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore`
-- Start Command: `dotnet ./publish/WikipediaMcpServer.dll`
+- Builder: Select "Dockerfile"
+- Dockerfile Path: `Dockerfile` (default)
 - Environment Variables:
   - `ASPNETCORE_ENVIRONMENT=Production`
   - `ASPNETCORE_URLS=http://0.0.0.0:$PORT`

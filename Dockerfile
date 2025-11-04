@@ -1,13 +1,14 @@
 # Use the official .NET 8 runtime as the base image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
 
 # Use the official .NET 8 SDK for building
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Copy global.json for SDK version consistency
+COPY global.json ./
 
 # Copy project file and restore dependencies
 COPY ["src/WikipediaMcpServer/WikipediaMcpServer.csproj", "src/WikipediaMcpServer/"]
@@ -30,17 +31,21 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Set environment variables for production
+# Set environment variables for Railway production deployment
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_URLS=http://0.0.0.0:$PORT
 ENV DOTNET_ENVIRONMENT=Production
+ENV MCP_MODE=false
+ENV ASPNETCORE_HTTPS_PORT=""
+ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' --shell /bin/bash appuser && chown -R appuser /app
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+# Health check that works with Railway's dynamic PORT
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:$PORT/health || exit 1
 
 ENTRYPOINT ["dotnet", "WikipediaMcpServer.dll"]

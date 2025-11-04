@@ -1,0 +1,80 @@
+# .dockerignore for Railway Dockerfile deployment
+# This file excludes unnecessary files from Docker build context
+
+# Build outputs
+bin/
+obj/
+out/
+publish/
+
+# Development files
+.vscode/
+.vs/
+*.user
+*.suo
+*.swp
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation and markdown files (not needed for runtime)
+*.md
+SETUP_GUIDE.md
+TROUBLESHOOTING.md
+COMPLIANCE_ANALYSIS.md
+blog_post_mcp_development.md
+
+# Test files and results
+tests/
+TestResults/
+*.runsettings
+
+# Package managers
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+server.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE and editor files
+.idea/
+*.code-workspace
+
+# Deployment configs for other platforms
+render.yaml
+nixpacks.toml
+
+# Environment files (use Railway environment variables instead)
+.env
+.env.*
+
+# Demo and testing scripts
+demo_*.sh
+test_*.sh
+log_*.sh
+run-tests.*
+start-server.*
+
+# Package files and dependencies downloads
+*.pkg
+dotnet-runtime-*.pkg
+
+# Postman collections (not needed for runtime)
+*.postman_*
+mcp-http-bridge.js
+
+# Docker related files (except Dockerfile itself)
+docker-compose.yml
+.dockerignore

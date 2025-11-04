@@ -206,15 +206,15 @@ curl -X POST https://wikipediamcpserver.onrender.com/mcp/rpc \
 5. **Deploy** with zero configuration!
 
 **Automatic Configuration Features:**
-- Uses `railway.json` for build and deploy settings
-- Uses `nixpacks.toml` for .NET 8 environment setup
+- Uses `railway.json` for build and deploy settings with Dockerfile builder
+- Uses official Microsoft .NET 8 Docker images for reliable builds
 - Includes health checks, restart policies, and environment variables
 - Compatible with `global.json` SDK version requirements
+- No dependency on Nixpacks or third-party package managers
 
 **Manual Configuration (if not using railway.json):**
-- Builder: Select "Nixpacks"
-- Build Command: `dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore`
-- Start Command: `dotnet ./publish/WikipediaMcpServer.dll`
+- Builder: Select "Dockerfile"
+- Dockerfile Path: `Dockerfile` (default)
 - Add environment variables:
   - `ASPNETCORE_ENVIRONMENT=Production`
   - `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
@@ -222,8 +222,9 @@ curl -X POST https://wikipediamcpserver.onrender.com/mcp/rpc \
   - `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false`
 
 **Railway Configuration Files:**
-- `railway.json` - Main deployment configuration with schema validation
-- `nixpacks.toml` - .NET 8 build environment configuration
+- `railway.json` - Main deployment configuration with Dockerfile builder
+- `Dockerfile` - Multi-stage build using official Microsoft .NET 8 images
+- `.dockerignore` - Optimized Docker build context
 - `global.json` - .NET SDK version consistency
 
 ### Remote MCP Client Configuration
