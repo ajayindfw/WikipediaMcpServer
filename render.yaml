@@ -1,3 +1,6 @@
+# Render.com deployment configuration for Wikipedia MCP Server
+# Updated for professional src/WikipediaMcpServer/ project structure
+# Compatible with global.json SDK version requirements
 services:
   - type: web
     name: wikipedia-mcp-server
@@ -5,10 +8,13 @@ services:
     plan: free  # Change to 'starter' or higher for production
     region: oregon  # Available regions: oregon, frankfurt, singapore
     buildCommand: |
+      echo "Using .NET SDK version from global.json:"
+      dotnet --version
       dotnet restore src/WikipediaMcpServer/WikipediaMcpServer.csproj
       dotnet publish src/WikipediaMcpServer/WikipediaMcpServer.csproj -c Release -o ./publish --no-restore
     startCommand: dotnet ./publish/WikipediaMcpServer.dll
     healthCheckPath: /health
+    # Port configuration: Render provides $PORT, appsettings.Production.json uses 8080 as fallback
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -22,6 +28,8 @@ services:
         value: ""  # Disable HTTPS port configuration
       - key: ASPNETCORE_FORWARDEDHEADERS_ENABLED
         value: "true"  # Enable forwarded headers for reverse proxy
+      - key: DOTNET_SYSTEM_GLOBALIZATION_INVARIANT
+        value: "false"  # Ensure proper globalization support
     # Auto-deploy from GitHub
     autoDeploy: true
     # Custom domains (optional)
