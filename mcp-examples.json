@@ -1,0 +1,63 @@
+{
+  "mcpServers": {
+    "wikipedia-render": {
+      "command": "node",
+      "args": [
+        "mcp-http-bridge.js",
+        "render"
+      ],
+      "description": "Wikipedia MCP Server on Render platform",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "wikipedia-railway": {
+      "command": "node",
+      "args": [
+        "mcp-http-bridge.js",
+        "railway"
+      ],
+      "description": "Wikipedia MCP Server on Railway platform",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "wikipedia-custom": {
+      "command": "node",
+      "args": [
+        "mcp-http-bridge.js",
+        "render"
+      ],
+      "description": "Wikipedia MCP Server with custom URL",
+      "env": {
+        "NODE_ENV": "production",
+        "REMOTE_SERVER_URL": "https://your-custom-deployment.com/mcp/rpc"
+      }
+    },
+    "wikipedia-env-provider": {
+      "command": "node",
+      "args": [
+        "mcp-http-bridge.js"
+      ],
+      "description": "Wikipedia MCP Server with environment-based provider selection",
+      "env": {
+        "NODE_ENV": "production",
+        "MCP_PROVIDER": "railway"
+      }
+    },
+    "wikipedia-local": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/absolute/path/to/WikipediaMcpServer.csproj",
+        "--",
+        "--mcp"
+      ],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      },
+      "description": "Local Wikipedia MCP Server for development"
+    }
+  }
+}

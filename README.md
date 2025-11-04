@@ -139,11 +139,11 @@ dotnet run --project src/WikipediaMcpServer/WikipediaMcpServer.csproj -- --mcp
 dotnet test --filter "FullyQualifiedName~StdioTests"
 ```
 
-📚 **See [STDIO_MODE_GUIDE.md](STDIO_MODE_GUIDE.md) for complete documentation.**
+📚 **See [SETUP_GUIDE.md](SETUP_GUIDE.md) for complete stdio mode documentation.**
 
 ### 2. **HTTP Mode** - For Remote Deployments and Testing ✅ **96% MCP Compliant**
 
-📚 **See [REMOTE_MCP_SETUP.md](REMOTE_MCP_SETUP.md) for remote access setup guide.**
+📚 **See [SETUP_GUIDE.md](SETUP_GUIDE.md) for remote access setup guide.**
 
 This server provides **TWO MCP-compliant HTTP endpoints**:
 
@@ -289,7 +289,9 @@ Since most MCP clients (VS Code, Claude Desktop) expect stdio communication, you
 
 ##### Step 1: Get the Bridge Script
 
-Download or copy the `mcp-http-bridge.js` file from this repository. This Node.js script converts MCP stdio communication to HTTP requests.
+Download or copy the `mcp-http-bridge.js` file from this repository. This Node.js script converts MCP stdio communication to HTTP requests and supports multiple deployment platforms.
+
+**New in v8.3:** The bridge script now supports both **Render** and **Railway** platforms with automatic provider detection.
 
 ##### Step 2: Configure Your MCP Client
 
@@ -300,12 +302,34 @@ Add this to your `mcp.json` file (`~/Library/Application Support/Code/User/mcp.j
 ```json
 {
   "mcpServers": {
+    "wikipedia-render": {
+      "command": "node",
+      "args": [
+        "/path/to/your/mcp-http-bridge.js",
+        "render"
+      ],
+      "description": "Wikipedia MCP Server on Render",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "wikipedia-railway": {
+      "command": "node",
+      "args": [
+        "/path/to/your/mcp-http-bridge.js",
+        "railway"
+      ],
+      "description": "Wikipedia MCP Server on Railway",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
     "wikipedia-remote": {
       "command": "node",
       "args": [
         "/path/to/your/mcp-http-bridge.js"
       ],
-      "description": "Remote Wikipedia MCP Server on Render",
+      "description": "Wikipedia MCP Server (default: Render)",
       "env": {
         "NODE_ENV": "production"
       }
@@ -321,10 +345,21 @@ Add this to your Claude Desktop config file (`~/Library/Application Support/Clau
 ```json
 {
   "mcpServers": {
-    "wikipedia-remote": {
+    "wikipedia-render": {
       "command": "node",
       "args": [
-        "/path/to/your/mcp-http-bridge.js"
+        "/path/to/your/mcp-http-bridge.js",
+        "render"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "wikipedia-railway": {
+      "command": "node",
+      "args": [
+        "/path/to/your/mcp-http-bridge.js",
+        "railway"
       ],
       "env": {
         "NODE_ENV": "production"
@@ -336,11 +371,23 @@ Add this to your Claude Desktop config file (`~/Library/Application Support/Clau
 
 ##### Step 3: Test the Remote Connection
 
-Test the bridge script manually:
+Test the bridge script with different providers:
 
 ```bash
-# Test the remote MCP server through the bridge
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}' | node mcp-http-bridge.js
+# Test Render deployment (default)
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node mcp-http-bridge.js render
+
+# Test Railway deployment
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node mcp-http-bridge.js railway
+
+# Use environment variable
+MCP_PROVIDER=railway node mcp-http-bridge.js
+
+# Custom URL override
+REMOTE_SERVER_URL=https://your-custom-url.com/mcp/rpc node mcp-http-bridge.js
+
+# Get help
+node mcp-http-bridge.js --help
 ```
 
 You should see a response like:
@@ -373,14 +420,35 @@ You should see a response like:
 
 #### HTTP Bridge Script Details
 
-The `mcp-http-bridge.js` script:
+The `mcp-http-bridge.js` script (v8.3+):
 
-- Reads MCP JSON-RPC messages from stdin
-- Converts them to HTTP POST requests
-- Sends requests to the remote server
-- Returns responses in proper MCP format
-- Handles errors and timeouts gracefully
-- Provides debug logging to stderr
+- **Multi-Platform Support**: Supports Render and Railway deployments
+- **Provider Selection**: Choose platform via command line argument or environment variable
+- **Automatic Detection**: Default to Render if no provider specified  
+- **Custom URLs**: Override with `REMOTE_SERVER_URL` environment variable
+- **Debug Logging**: Enable with `MCP_DEBUG=true` for troubleshooting
+- **Error Handling**: Graceful handling of timeouts and network errors
+- **Help Support**: Built-in help with `--help` flag
+
+**Supported Platforms:**
+- **render**: https://wikipediamcpserver.onrender.com/mcp/rpc (default)
+- **railway**: https://wikipedia-mcp-server-production.up.railway.app/mcp/rpc
+
+**Usage Examples:**
+```bash
+# Use specific provider
+node mcp-http-bridge.js render
+node mcp-http-bridge.js railway
+
+# Use environment variable
+MCP_PROVIDER=railway node mcp-http-bridge.js
+
+# Custom URL override
+REMOTE_SERVER_URL=https://your-deployment.com/mcp/rpc node mcp-http-bridge.js
+
+# Debug mode
+MCP_DEBUG=true node mcp-http-bridge.js railway
+```
 
 #### Alternative: Direct HTTP Testing
 
@@ -1026,7 +1094,6 @@ WikipediaMcpServer/
 │   ├── index.html                                      # Coverage dashboard
 │   └── ...                                             # Detailed coverage files
 ├── docs/                                               # Additional documentation
-├── mcp.json                                            # Example MCP configuration (reference only)
 ├── WikipediaMcpServer.sln                             # Solution file
 ├── WikipediaMcpServer-MCP-JsonRPC-Collection.json      # JSON-RPC 2.0 MCP Protocol Postman collection
 ├── WikipediaMcpServer-Environment.postman_environment.json  # Local development environment
@@ -1040,7 +1107,6 @@ The application uses several configuration approaches:
 
 - `appsettings.json` - Production settings
 - `appsettings.Development.json` - Development settings
-- `mcp.json` - Example MCP configuration file (reference only - not used by VS Code or Claude Desktop)
 
 ## Testing Files
 
@@ -1056,6 +1122,13 @@ The application uses several configuration approaches:
 
 This project follows semantic versioning and includes tagged releases:
 
+- **v8.3** - Multi-Platform Bridge Support - Render & Railway provider selection (206 tests)
+  - Enhanced `mcp-http-bridge.js` with multi-platform support (Render & Railway)
+  - Provider selection via command line arguments or environment variables
+  - Custom URL override support with `REMOTE_SERVER_URL` environment variable
+  - Built-in help system and improved error handling
+  - Updated configuration examples for both deployment platforms
+  - Railway integration with health check endpoints and deployment documentation
 - **v8.2** - Remote MCP Support - HTTP RPC endpoint for remote access (198 tests)
   - Added `/mcp/rpc` endpoint for remote MCP access via HTTP POST
   - Dual transport support: stdio (local) + HTTP RPC (remote) simultaneously

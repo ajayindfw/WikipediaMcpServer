@@ -5,18 +5,89 @@
  * 
  * This script bridges MCP JSON-RPC communication over stdio to HTTP requests.
  * It reads MCP messages from stdin, converts them to HTTP POST requests,
- * and sends them to the remote Wikipedia MCP Server on Render.
+ * and sends them to the remote Wikipedia MCP Server on supported platforms.
+ * 
+ * Version: 1.1.0 - Added logging/setLevel method support for VS Code MCP extension compatibility
+ * 
+ * Supported Platforms:
+ *   - render: https://wikipediamcpserver.onrender.com/mcp/rpc
+ *   - railway: https://wikipedia-mcp-server-production.up.railway.app/mcp/rpc
+ * 
+ * Local Method Handling:
+ *   - logging/setLevel: Handled locally to prevent VS Code MCP errors
+ *   - notifications/initialized: Handled locally for proper initialization
  * 
  * Usage:
- *   echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{...}}' | node mcp-http-bridge.js
+ *   node mcp-http-bridge.js [provider]
+ *   
+ * Examples:
+ *   node mcp-http-bridge.js render   # Connect to Render deployment
+ *   node mcp-http-bridge.js railway  # Connect to Railway deployment
+ *   node mcp-http-bridge.js          # Default to Render
  */
 
 const https = require('https');
 const http = require('http');
 const readline = require('readline');
 
+// Platform configurations
+const PLATFORMS = {
+    render: {
+        url: 'https://wikipediamcpserver.onrender.com/mcp/rpc',
+        name: 'Render'
+    },
+    railway: {
+        url: 'https://wikipedia-mcp-server-production.up.railway.app/mcp/rpc',
+        name: 'Railway'
+    }
+};
+
+// Get provider from command line argument or environment variable
+const provider = process.argv[2] || process.env.MCP_PROVIDER || 'render';
+
+// Handle help requests
+if (provider === '--help' || provider === '-h' || provider === 'help') {
+    console.log(`
+MCP HTTP Bridge for Wikipedia MCP Server (v1.1.0)
+
+Usage: node mcp-http-bridge.js [provider]
+
+Supported providers:
+  render   - Connect to Render deployment (default)
+             URL: https://wikipediamcpserver.onrender.com/mcp/rpc
+  railway  - Connect to Railway deployment  
+             URL: https://wikipedia-mcp-server-production.up.railway.app/mcp/rpc
+
+Environment variables:
+  MCP_PROVIDER        - Set default provider (render|railway)
+  REMOTE_SERVER_URL   - Override the server URL
+  MCP_DEBUG          - Enable debug logging (true|false)
+
+Features:
+  ✅ Multi-platform deployment support
+  ✅ VS Code MCP extension compatibility (logging/setLevel support)
+  ✅ Automatic error handling and timeouts
+  ✅ Debug logging and troubleshooting
+
+Examples:
+  node mcp-http-bridge.js render
+  node mcp-http-bridge.js railway
+  MCP_PROVIDER=railway node mcp-http-bridge.js
+  REMOTE_SERVER_URL=https://custom.com/mcp/rpc node mcp-http-bridge.js
+`);
+    process.exit(0);
+}
+
+const platformConfig = PLATFORMS[provider];
+
+if (!platformConfig) {
+    console.error(`Error: Unsupported provider '${provider}'. Supported providers: ${Object.keys(PLATFORMS).join(', ')}`);
+    console.error(`Use 'node mcp-http-bridge.js --help' for usage information.`);
+    process.exit(1);
+}
+
 // Configuration - can be overridden with environment variable
-const REMOTE_SERVER_URL = process.env.REMOTE_SERVER_URL || 'https://wikipediamcpserver.onrender.com/mcp/rpc';
+const REMOTE_SERVER_URL = process.env.REMOTE_SERVER_URL || platformConfig.url;
 const TIMEOUT = 30000; // 30 seconds
 const DEBUG = process.env.MCP_DEBUG === 'true';
 
@@ -65,6 +136,11 @@ function sendHttpRequest(data) {
             res.on('end', () => {
                 debug(`Response status: ${res.statusCode}`);
                 debug(`Response data: ${responseData}`);
+                
+                if (res.statusCode !== 200) {
+                    reject(new Error(`HTTP ${res.statusCode}: ${responseData}`));
+                    return;
+                }
                 
                 try {
                     const jsonResponse = JSON.parse(responseData);
@@ -123,7 +199,26 @@ async function processMcpMessage(message) {
             return createErrorResponse(message.id || null, -32600, "Missing method");
         }
 
-        // Send to remote server
+        // Handle logging methods locally (VS Code MCP extension expects these)
+        if (message.method === 'logging/setLevel') {
+            debug(`Logging setLevel called with: ${JSON.stringify(message.params)}`);
+            return {
+                jsonrpc: "2.0",
+                id: message.id,
+                result: {} // Empty result indicates success
+            };
+        }
+
+        if (message.method === 'notifications/initialized') {
+            debug(`Notifications initialized`);
+            return {
+                jsonrpc: "2.0",
+                id: message.id,
+                result: {} // Empty result indicates success
+            };
+        }
+
+        // Forward all other methods to remote server
         const response = await sendHttpRequest(message);
         debug(`Received response: ${JSON.stringify(response)}`);
         
@@ -144,7 +239,8 @@ async function processMcpMessage(message) {
  * Main function - process stdin line by line
  */
 async function main() {
-    debug('MCP HTTP Bridge starting...');
+    debug(`MCP HTTP Bridge starting for ${platformConfig.name}...`);
+    debug(`Provider: ${provider}`);
     debug(`Remote server: ${REMOTE_SERVER_URL}`);
     debug(`Timeout: ${TIMEOUT}ms`);
     
@@ -176,7 +272,10 @@ async function main() {
 
     rl.on('close', () => {
         debug('Input stream closed, exiting...');
-        process.exit(0);
+        // Give a small delay to ensure any pending responses are flushed
+        setTimeout(() => {
+            process.exit(0);
+        }, 100);
     });
 
     process.on('SIGINT', () => {
