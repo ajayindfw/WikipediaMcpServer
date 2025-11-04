@@ -49,5 +49,4 @@ USER appuser
 # Railway handles health checks at platform level - no Docker HEALTHCHECK needed
 # The /health endpoint is available and Railway will check it directly
 
-# Add debugging to see what happens at startup
-ENTRYPOINT ["sh", "-c", "echo 'Starting app with PORT=$PORT and ASPNETCORE_URLS=$ASPNETCORE_URLS' && dotnet WikipediaMcpServer.dll"]
+ENTRYPOINT ["dotnet", "WikipediaMcpServer.dll"]

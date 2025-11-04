@@ -5,6 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
+    "startCommand": "dotnet WikipediaMcpServer.dll",
     "healthcheckPath": "/railway-health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
@@ -13,6 +14,7 @@
   "environments": {
     "production": {
       "deploy": {
+        "startCommand": "dotnet WikipediaMcpServer.dll",
         "healthcheckPath": "/railway-health"
       }
     }
