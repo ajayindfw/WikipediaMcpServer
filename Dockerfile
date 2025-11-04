@@ -1,11 +1,13 @@
 # Use the official .NET 8 runtime as the base image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 WORKDIR /app
+RUN echo "========== DOCKERFILE IS BEING USED =========="
 
 # Use the official .NET 8 SDK for building
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+RUN echo "========== BUILDING WITH DOCKERFILE =========="
 
 # Copy global.json for SDK version consistency
 COPY global.json ./
