@@ -44,8 +44,7 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 RUN adduser --disabled-password --gecos '' --shell /bin/bash appuser && chown -R appuser /app
 USER appuser
 
-# Health check that works with Railway's dynamic PORT
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:$PORT/health || exit 1
+# Railway handles health checks at platform level - no Docker HEALTHCHECK needed
+# The /health endpoint is available and Railway will check it directly
 
 ENTRYPOINT ["dotnet", "WikipediaMcpServer.dll"]
