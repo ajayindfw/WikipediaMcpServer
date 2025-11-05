@@ -372,6 +372,17 @@ static async Task RunStdioModeAsync()
     using var reader = new StreamReader(stdin);
     using var writer = new StreamWriter(stdout) { AutoFlush = true };
     
+    // STDIO MESSAGE PROCESSING LOOP
+    // Continuously reads JSON-RPC messages from stdin and processes them
+    // This is the heart of the MCP stdio protocol implementation
+    // 
+    // MESSAGE FLOW for tools/call:
+    // 1. Client sends: {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wikipedia_search","arguments":{"query":"AI"}}}
+    // 2. Server parses: Extracts method="tools/call" 
+    // 3. Server routes: Calls HandleToolsCallStdio()
+    // 4. Server executes: Uses reflection to invoke WikipediaTools.SearchWikipedia()
+    // 5. Server responds: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"Wikipedia result..."}]}}
+    // 6. Client receives: Tool execution complete with result
     try
     {
         while (!reader.EndOfStream)
@@ -385,7 +396,7 @@ static async Task RunStdioModeAsync()
             
             try
             {
-                // Parse JSON-RPC request
+                // JSON-RPC REQUEST PARSING: Convert stdin line to structured request
                 var jsonDoc = JsonDocument.Parse(line);
                 var root = jsonDoc.RootElement;
                 
@@ -394,13 +405,18 @@ static async Task RunStdioModeAsync()
                     var methodName = method.GetString();
                     Console.Error.WriteLine($"{ConsoleColors.MethodMagenta}{ConsoleColors.Bold}🎯 Method:{ConsoleColors.Reset} {ConsoleColors.InfoWhite}{methodName}{ConsoleColors.Reset}");
                     
-                    // Handle different MCP methods with full compliance
+                    // MCP METHOD ROUTING: Dispatch JSON-RPC requests to appropriate handlers
+                    // Each method represents a different phase of the MCP protocol lifecycle:
+                    // - initialize: Establish connection and negotiate capabilities
+                    // - notifications/initialized: Client confirms initialization complete
+                    // - tools/list: Client discovers available tools (reflection-based)
+                    // - tools/call: Client executes a specific tool (dynamic invocation)
                     string response = methodName switch
                     {
                         "initialize" => await HandleInitializeStdioCompliant(root),
                         "notifications/initialized" => HandleNotificationStdio(root),
                         "tools/list" => await HandleToolsListStdio(root),
-                        "tools/call" => await HandleToolsCallStdio(root, serviceProvider),
+                        "tools/call" => await HandleToolsCallStdio(root, serviceProvider), // ← TOOL EXECUTION ENTRY POINT
                         _ => CreateErrorResponse(root, -32601, "Method not found")
                     };
                     
@@ -506,45 +522,62 @@ static string HandleNotificationStdio(JsonElement request)
     return ""; // Empty response indicates "no response needed"
 }
 
+// Handle tools/list request in stdio mode using dynamic reflection-based tool discovery
+// Flow: Client Request → Method Routing → Reflection Scan → Schema Generation → JSON Response
 static Task<string> HandleToolsListStdio(JsonElement request)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
     
     Console.Error.WriteLine("🔧 Tools list request with reflection-based discovery");
     
-    // Use reflection to discover tools from WikipediaTools class - no hardcoding!
+    // ZERO HARDCODING APPROACH: Use reflection to discover tools from WikipediaTools class
+    // This means adding a new tool only requires adding a new method with [McpServerTool] attribute
+    // No manual tool registration or configuration needed!
     var tools = DiscoverToolsFromAttributes();
     var toolsJson = string.Join(",", tools.Select(tool => tool.ToJson()));
     
     Console.Error.WriteLine($"📋 Discovered {tools.Count} tools via reflection");
     
+    // Construct JSON-RPC 2.0 compliant response with discovered tools
     var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"tools\":[{toolsJson}]}}}}";
     return Task.FromResult(response);
 }
 
-// Discover tools using reflection on the WikipediaTools class attributes
+// DYNAMIC TOOL DISCOVERY ENGINE
+// Discovers MCP tools using reflection on the WikipediaTools class attributes
+// Convention over Configuration: Method attributes drive everything
+// Key Design Principles:
+// 1. Zero Hardcoding - No manual tool registration required
+// 2. Automatic Schema Generation - Method signatures become JSON schemas  
+// 3. Service Injection Aware - Filters out DI parameters from tool schemas
+// 4. Convention Driven - [McpServerTool] + [Description] attributes define tools
 static List<ToolDefinition> DiscoverToolsFromAttributes()
 {
     var tools = new List<ToolDefinition>();
     var toolsType = typeof(WikipediaTools);
     
+    // REFLECTION SCAN: Find all public static methods that could be MCP tools
     foreach (var method in toolsType.GetMethods(BindingFlags.Public | BindingFlags.Static))
     {
+        // TOOL IDENTIFICATION: Look for [McpServerTool] attribute to mark method as MCP tool
         var toolAttribute = method.GetCustomAttribute<McpServerToolAttribute>();
-        if (toolAttribute == null) continue;
+        if (toolAttribute == null) continue; // Skip non-tool methods
         
+        // DESCRIPTION EXTRACTION: Get human-readable description from [Description] attribute
         var descriptionAttribute = method.GetCustomAttribute<DescriptionAttribute>();
         var description = descriptionAttribute?.Description ?? "No description available";
         
-        // Build input schema from method parameters
+        // JSON SCHEMA GENERATION: Build input schema from method parameters automatically
         var properties = new Dictionary<string, object>();
         var required = new List<string>();
         
         foreach (var param in method.GetParameters())
         {
-            // Skip service injection parameters
+            // SERVICE INJECTION FILTER: Skip dependency injection parameters (like IWikipediaService)
+            // These are injected at runtime, not part of the tool's user-facing API
             if (param.ParameterType == typeof(IWikipediaService)) continue;
             
+            // PARAMETER SCHEMA BUILDING: Convert method parameter to JSON schema property
             var paramDescription = param.GetCustomAttribute<DescriptionAttribute>();
             properties[param.Name!] = new
             {
@@ -552,13 +585,14 @@ static List<ToolDefinition> DiscoverToolsFromAttributes()
                 description = paramDescription?.Description ?? $"Parameter {param.Name}"
             };
             
-            // Add to required if parameter is not optional
+            // REQUIRED FIELD DETECTION: Non-optional parameters become required in schema
             if (!param.HasDefaultValue)
             {
                 required.Add(param.Name!);
             }
         }
         
+        // SCHEMA CONSTRUCTION: Build complete JSON schema for the tool
         var inputSchema = new
         {
             type = "object",
@@ -566,6 +600,7 @@ static List<ToolDefinition> DiscoverToolsFromAttributes()
             required = required.ToArray()
         };
         
+        // TOOL DEFINITION CREATION: Combine all metadata into tool definition
         tools.Add(new ToolDefinition
         {
             Name = toolAttribute.Name ?? method.Name,
@@ -574,25 +609,37 @@ static List<ToolDefinition> DiscoverToolsFromAttributes()
         });
     }
     
+    // DISCOVERY COMPLETE: Return all discovered tool definitions
+    // Example output: wikipedia_search, wikipedia_sections, wikipedia_section_content
     return tools;
 }
 
+// Handle tools/call request in stdio mode using dynamic reflection-based tool execution
+// Complete Flow: Request Reception → Parameter Extraction → Method Discovery → Dynamic Invocation → Response Construction
+// Example Input: {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"wikipedia_search","arguments":{"query":"AI"}}}
+// Example Output: {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"Wikipedia search result..."}]}}
 static async Task<string> HandleToolsCallStdio(JsonElement request, IServiceProvider serviceProvider)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
     
     try
     {
+        // PARAMETER EXTRACTION: Extract tool name and arguments from JSON-RPC request
+        // Expected structure: params.name = "wikipedia_search", params.arguments = {"query": "artificial intelligence"}
         var toolName = request.GetProperty("params").GetProperty("name").GetString();
         var arguments = request.GetProperty("params").GetProperty("arguments");
         
         Console.Error.WriteLine($"🛠️ Tool call: {toolName}");
         
-        // Use reflection to find and invoke the tool method dynamically
+        // DYNAMIC TOOL EXECUTION: Use reflection to find and invoke the tool method
+        // This replaces hardcoded switch statements - adding new tools requires no code changes here!
+        // Flow: toolName → Method Discovery → Parameter Resolution → Method Invocation → Result
         var resultText = await InvokeToolByReflection(toolName!, arguments, serviceProvider);
         
         Console.Error.WriteLine($"✅ Tool execution successful, result length: {resultText.Length} chars");
         
+        // MCP RESPONSE CONSTRUCTION: Wrap tool result in MCP-compliant JSON-RPC response format
+        // MCP spec requires content array with type/text structure for tool results
         var escapedText = JsonSerializer.Serialize(resultText);
         // Use compact single-line JSON for stdio mode (required by JSON-RPC 2.0 spec)
         var response = $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{\"content\":[{{\"type\":\"text\",\"text\":{escapedText}}}]}}}}";
@@ -600,51 +647,79 @@ static async Task<string> HandleToolsCallStdio(JsonElement request, IServiceProv
     }
     catch (Exception ex)
     {
+        // ERROR HANDLING: Convert .NET exceptions to MCP-compliant JSON-RPC error responses
         Console.Error.WriteLine($"❌ Tool execution failed: {ex.Message}");
         return CreateErrorResponse(request, -32603, $"Internal error: {ex.Message}");
     }
 }
 
-// Dynamically invoke tool methods using reflection - no more hardcoded switch!
+// DYNAMIC TOOL INVOCATION ENGINE  
+// Invokes tool methods using reflection - no hardcoded switch statements!
+// Handles both sync/async methods and supports dependency injection
+// 
+// TOOLS/CALL FLOW DETAILS:
+// 1. Method Discovery: Scans WikipediaTools class for method with matching [McpServerTool(Name="toolName")]
+// 2. Parameter Resolution: Maps JSON arguments to method parameters + injects services from DI
+// 3. Dynamic Invocation: Calls method.Invoke() with prepared parameter array
+// 4. Result Handling: Awaits async results and converts to string format
+//
+// Key Features:
+// 1. Dynamic Method Discovery - Finds method by tool name at runtime
+// 2. Parameter Extraction - Maps JSON arguments to method parameters
+// 3. Service Injection - Automatically injects IWikipediaService 
+// 4. Type Safety - Handles different parameter types and naming conventions
+//
+// Example: toolName="wikipedia_search", arguments={"query":"AI"} 
+// → Finds WikipediaTools.SearchWikipedia() 
+// → Calls SearchWikipedia(wikipediaService, "AI")
+// → Returns "Wikipedia search result for 'AI'..."
 static async Task<string> InvokeToolByReflection(string toolName, JsonElement arguments, IServiceProvider serviceProvider)
 {
     var toolsType = typeof(WikipediaTools);
     
-    // Find the method with the matching tool name
+    // TOOL METHOD DISCOVERY: Find the method with matching tool name
+    // Scans all static methods in WikipediaTools for [McpServerTool(Name=toolName)]
     foreach (var method in toolsType.GetMethods(BindingFlags.Public | BindingFlags.Static))
     {
         var toolAttribute = method.GetCustomAttribute<McpServerToolAttribute>();
         if (toolAttribute == null || toolAttribute.Name != toolName) continue;
         
-        // Found the method! Now prepare the parameters
+        // FOUND THE TARGET METHOD! Now prepare parameters for invocation
+        // Example: Found WikipediaTools.SearchWikipedia(IWikipediaService, string query)
         var parameters = new List<object?>();
         
+        // PARAMETER RESOLUTION LOOP: Build parameter array matching method signature
         foreach (var param in method.GetParameters())
         {
             if (param.ParameterType == typeof(IWikipediaService))
             {
-                // Inject the service
+                // DEPENDENCY INJECTION: Inject service from DI container
+                // Services are registered in RunStdioModeAsync() and resolved here automatically
                 parameters.Add(serviceProvider.GetRequiredService<IWikipediaService>());
             }
             else
             {
-                // Extract from JSON arguments
+                // USER PARAMETER EXTRACTION: Extract from JSON arguments with smart name matching
+                // Supports multiple naming conventions: exact match → snake_case → camelCase
+                // Example: "query" parameter gets value "AI" from arguments.query
                 var paramValue = ExtractParameterFromJson(param, arguments);
                 parameters.Add(paramValue);
             }
         }
         
-        // Invoke the method dynamically
+        // DYNAMIC METHOD INVOCATION: Execute the discovered method with prepared parameters
+        // Equivalent to: await WikipediaTools.SearchWikipedia(wikipediaService, "AI")
         var result = method.Invoke(null, parameters.ToArray());
         
-        // Handle async methods
+        // RESULT HANDLING: Support both async and sync method return types
+        // Most Wikipedia tools are async (Task<string>) but framework supports both
         if (result is Task<string> asyncResult)
         {
-            return await asyncResult;
+            return await asyncResult;  // Await async tool execution
         }
         else if (result is string syncResult)
         {
-            return syncResult;
+            return syncResult;         // Return sync result immediately
         }
         else
         {
@@ -652,28 +727,36 @@ static async Task<string> InvokeToolByReflection(string toolName, JsonElement ar
         }
     }
     
+    // TOOL NOT FOUND: No method found with matching [McpServerTool(Name=toolName)]
     return $"Unknown tool: {toolName}";
 }
 
-// Extract parameter value from JSON arguments based on parameter info
+// SMART PARAMETER EXTRACTION ENGINE
+// Extracts parameter values from JSON arguments with intelligent name matching
+// Supports multiple naming conventions to handle client variations
+// Key Features:
+// 1. Exact Name Match - Try parameter name as-is first
+// 2. Snake Case Conversion - Handle VS Code MCP snake_case style  
+// 3. Camel Case Fallback - Handle direct API calls with camelCase
+// 4. Type Safety - Extract values based on target parameter type
 static object? ExtractParameterFromJson(ParameterInfo param, JsonElement arguments)
 {
     var paramName = param.Name!;
     
-    // Try exact parameter name first
+    // EXACT MATCH: Try exact parameter name first (most common case)
     if (arguments.TryGetProperty(paramName, out var exactMatch))
     {
         return ExtractValueByType(exactMatch, param.ParameterType);
     }
     
-    // Try snake_case version (VS Code MCP often uses snake_case)
+    // SNAKE_CASE CONVERSION: VS Code MCP often uses snake_case (sectionTitle → section_title)
     var snakeCaseName = ConvertToSnakeCase(paramName);
     if (arguments.TryGetProperty(snakeCaseName, out var snakeMatch))
     {
         return ExtractValueByType(snakeMatch, param.ParameterType);
     }
     
-    // Try camelCase version
+    // CAMEL_CASE FALLBACK: Handle direct API calls with camelCase
     var camelCaseName = char.ToLowerInvariant(paramName[0]) + paramName.Substring(1);
     if (arguments.TryGetProperty(camelCaseName, out var camelMatch))
     {
@@ -683,13 +766,18 @@ static object? ExtractParameterFromJson(ParameterInfo param, JsonElement argumen
     throw new ArgumentException($"Required parameter '{paramName}' not found in arguments");
 }
 
-// Convert parameter name to snake_case (e.g., sectionTitle -> section_title)
+// NAMING CONVENTION CONVERTER
+// Converts parameter names to snake_case for VS Code MCP compatibility
+// Example: sectionTitle → section_title, topicName → topic_name
 static string ConvertToSnakeCase(string input)
 {
     return System.Text.RegularExpressions.Regex.Replace(input, "([a-z])([A-Z])", "$1_$2").ToLowerInvariant();
 }
 
-// Extract value from JsonElement based on target type
+// TYPE-SAFE VALUE EXTRACTION
+// Extracts values from JsonElement based on target parameter type
+// Provides type safety for method parameter binding
+// Extensible: Add more types as needed for complex tool parameters
 static object? ExtractValueByType(JsonElement element, Type targetType)
 {
     if (targetType == typeof(string))
@@ -704,13 +792,18 @@ static object? ExtractValueByType(JsonElement element, Type targetType)
     {
         return element.GetBoolean();
     }
-    // Add more types as needed
+    // EXTENSIBILITY POINT: Add more types as needed (decimal, DateTime, etc.)
     else
     {
-        return element.GetString(); // Default to string
+        return element.GetString(); // Default to string for unknown types
     }
 }
 
+// JSON-RPC ERROR RESPONSE GENERATOR for stdio mode
+// Converts .NET exceptions into MCP-compliant JSON-RPC error responses
+// Used by tools/call when tool execution fails (e.g., missing parameters, API errors)
+// Error codes follow JSON-RPC 2.0 specification:
+// -32700: Parse error, -32600: Invalid Request, -32601: Method not found, -32603: Internal error
 static string CreateErrorResponse(JsonElement request, int code, string message)
 {
     var id = request.TryGetProperty("id", out var idProp) ? idProp.ToString() : "null";
@@ -970,13 +1063,17 @@ public static class ConsoleColors
     public const string InfoWhite = "\u001b[97m";        // Bright white
 }
 
-// Helper class for tool definition
+// TOOL DEFINITION HELPER CLASS
+// Represents a discovered MCP tool with metadata and JSON serialization capability
+// Used by the reflection-based tool discovery engine to build tool responses
 class ToolDefinition
 {
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public object InputSchema { get; set; } = new { };
     
+    // JSON SERIALIZATION: Convert tool definition to MCP-compliant JSON format
+    // Produces output like: {"name":"wikipedia_search","description":"...","inputSchema":{...}}
     public string ToJson()
     {
         var inputSchemaJson = JsonSerializer.Serialize(InputSchema, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
