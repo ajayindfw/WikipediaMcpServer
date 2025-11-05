@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Working SSE Demo - Wikipedia MCP Server</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .demo-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .endpoint-box {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .sse-box {
+            border-color: #4CAF50;
+        }
+        
+        .http-box {
+            border-color: #2196F3;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin: 5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .http-button {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+        
+        .messages {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        
+        .message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+        
+        .message.http {
+            background: rgba(33, 150, 243, 0.2);
+            border-left-color: #2196F3;
+        }
+        
+        .message.sse {
+            background: rgba(76, 175, 80, 0.2);
+            border-left-color: #4CAF50;
+        }
+        
+        .message.system {
+            background: rgba(156, 39, 176, 0.2);
+            border-left-color: #9C27B0;
+        }
+        
+        .timestamp {
+            color: #ccc;
+            font-size: 0.8em;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status.connected {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        
+        .status.disconnected {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+        
+        @media (max-width: 768px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌊 Working SSE vs HTTP Demo</h1>
+            <p>Live comparison of Server-Sent Events vs Traditional HTTP</p>
+        </div>
+
+        <div class="demo-section">
+            <h2>🔬 Transport Protocol Comparison</h2>
+            <p>This demo shows the <strong>conceptual difference</strong> between SSE streaming and HTTP request/response patterns using your MCP server's working endpoints.</p>
+            
+            <div class="comparison">
+                <div class="endpoint-box sse-box">
+                    <h3>🌊 SSE Concept Demo</h3>
+                    <p><strong>Using:</strong> /mcp/rpc with simulated streaming</p>
+                    <p><strong>Shows:</strong> How SSE would work with persistent connections</p>
+                    <div id="sse-status" class="status disconnected">❌ Disconnected</div>
+                    <button onclick="startSSEDemo()">🌊 Start SSE Simulation</button>
+                    <button onclick="stopSSEDemo()">⛔ Stop SSE</button>
+                    <button onclick="sendSSEMessage()">📤 Send via SSE</button>
+                    <div id="sse-messages" class="messages">
+                        <div class="message system">
+                            <span class="timestamp">[System]</span> SSE simulation ready
+                            <br>This simulates persistent connection behavior
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="endpoint-box http-box">
+                    <h3>📞 HTTP Request/Response</h3>
+                    <p><strong>Using:</strong> /mcp/rpc endpoint directly</p>
+                    <p><strong>Shows:</strong> Traditional one-shot HTTP communication</p>
+                    <div id="http-status" class="status disconnected">❌ Ready for requests</div>
+                    <button class="http-button" onclick="sendHTTPRequest('initialize')">🏁 Initialize</button>
+                    <button class="http-button" onclick="sendHTTPRequest('tools/list')">🛠️ List Tools</button>
+                    <button class="http-button" onclick="sendHTTPRequest('search')">🔍 Search</button>
+                    <div id="http-messages" class="messages">
+                        <div class="message system">
+                            <span class="timestamp">[System]</span> HTTP mode ready
+                            <br>Each button click = new HTTP connection
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>📊 Connection Statistics</h2>
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-number" id="sseMessages">0</div>
+                    <div>SSE Messages</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="httpRequests">0</div>
+                    <div>HTTP Requests</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="connectionTime">0</div>
+                    <div>SSE Connection Time (s)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="httpConnections">0</div>
+                    <div>HTTP Connections Made</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🎯 Key Differences Demonstrated</h2>
+            <div class="comparison">
+                <div class="endpoint-box sse-box">
+                    <h3>🌊 SSE Advantages</h3>
+                    <ul>
+                        <li>✅ Persistent connection</li>
+                        <li>✅ Server can push messages</li>
+                        <li>✅ Real-time communication</li>
+                        <li>✅ Lower latency</li>
+                        <li>✅ Perfect for AI assistants</li>
+                    </ul>
+                </div>
+                <div class="endpoint-box http-box">
+                    <h3>📞 HTTP Characteristics</h3>
+                    <ul>
+                        <li>🔄 New connection per request</li>
+                        <li>🔄 Request → Response → Close</li>
+                        <li>🔄 Higher overhead</li>
+                        <li>✅ Simple and reliable</li>
+                        <li>✅ Perfect for APIs and testing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sseActive = false;
+        let sseTimer = null;
+        let connectionStartTime = null;
+        let sseMessageCount = 0;
+        let httpRequestCount = 0;
+        let httpConnectionCount = 0;
+        let messageId = 1;
+
+        function addMessage(container, content, type = 'system') {
+            const messages = document.getElementById(container);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${content}`;
+            
+            messages.appendChild(messageDiv);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('sseMessages').textContent = sseMessageCount;
+            document.getElementById('httpRequests').textContent = httpRequestCount;
+            document.getElementById('httpConnections').textContent = httpConnectionCount;
+            
+            if (connectionStartTime) {
+                const seconds = Math.floor((Date.now() - connectionStartTime) / 1000);
+                document.getElementById('connectionTime').textContent = seconds;
+            }
+        }
+
+        function startSSEDemo() {
+            if (sseActive) return;
+            
+            sseActive = true;
+            connectionStartTime = Date.now();
+            
+            document.getElementById('sse-status').textContent = "✅ SSE Connected (simulated)";
+            document.getElementById('sse-status').className = "status connected";
+            
+            addMessage('sse-messages', '🌊 SSE connection established!', 'sse');
+            addMessage('sse-messages', '🔄 Connection remains open for multiple messages', 'sse');
+            
+            // Simulate periodic server messages (what real SSE does)
+            sseTimer = setInterval(() => {
+                if (sseActive) {
+                    const serverMessages = [
+                        'Server heartbeat',
+                        'Real-time status update',
+                        'Push notification from server',
+                        'Live data stream event'
+                    ];
+                    const randomMessage = serverMessages[Math.floor(Math.random() * serverMessages.length)];
+                    addMessage('sse-messages', `📥 Server push: ${randomMessage}`, 'sse');
+                    sseMessageCount++;
+                    updateStats();
+                }
+            }, 3000);
+            
+            updateStats();
+        }
+
+        function stopSSEDemo() {
+            sseActive = false;
+            connectionStartTime = null;
+            
+            if (sseTimer) {
+                clearInterval(sseTimer);
+                sseTimer = null;
+            }
+            
+            document.getElementById('sse-status').textContent = "❌ SSE Disconnected";
+            document.getElementById('sse-status').className = "status disconnected";
+            
+            addMessage('sse-messages', '🔌 SSE connection closed', 'system');
+            updateStats();
+        }
+
+        function sendSSEMessage() {
+            if (!sseActive) {
+                addMessage('sse-messages', '❌ Please start SSE connection first', 'system');
+                return;
+            }
+            
+            addMessage('sse-messages', '📤 Sending message via persistent SSE connection', 'sse');
+            
+            // Simulate response through same connection
+            setTimeout(() => {
+                addMessage('sse-messages', '📥 Response received via SSE (same connection)', 'sse');
+                sseMessageCount++;
+                updateStats();
+            }, 500);
+        }
+
+        async function sendHTTPRequest(type) {
+            addMessage('http-messages', '📤 Creating new HTTP connection...', 'http');
+            httpConnectionCount++;
+            
+            try {
+                let request;
+                switch(type) {
+                    case 'initialize':
+                        request = {
+                            jsonrpc: "2.0",
+                            id: messageId++,
+                            method: "initialize",
+                            params: {
+                                protocolVersion: "2024-11-05",
+                                capabilities: { tools: {} },
+                                clientInfo: { name: "HTTP Demo", version: "1.0" }
+                            }
+                        };
+                        break;
+                    case 'tools/list':
+                        request = {
+                            jsonrpc: "2.0",
+                            id: messageId++,
+                            method: "tools/list",
+                            params: {}
+                        };
+                        break;
+                    case 'search':
+                        request = {
+                            jsonrpc: "2.0",
+                            id: messageId++,
+                            method: "tools/call",
+                            params: {
+                                name: "wikipedia_search",
+                                arguments: { query: "artificial intelligence" }
+                            }
+                        };
+                        break;
+                }
+
+                addMessage('http-messages', `📤 Sending ${type} request`, 'http');
+                
+                const response = await fetch('/mcp/rpc', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'MCP-Protocol-Version': '2024-11-05'
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                if (response.ok) {
+                    const data = await response.text();
+                    addMessage('http-messages', `📥 Response: ${data.substring(0, 100)}...`, 'http');
+                    addMessage('http-messages', '🔚 HTTP connection closed', 'http');
+                } else {
+                    addMessage('http-messages', `❌ HTTP Error: ${response.status}`, 'http');
+                }
+                
+                httpRequestCount++;
+                updateStats();
+                
+            } catch (error) {
+                addMessage('http-messages', `❌ Request failed: ${error.message}`, 'http');
+            }
+        }
+
+        // Initialize
+        updateStats();
+        
+        // Add initial explanation
+        setTimeout(() => {
+            addMessage('sse-messages', '💡 This simulates how VS Code MCP extension works', 'system');
+            addMessage('http-messages', '💡 This shows traditional API communication', 'system');
+        }, 1000);
+    </script>
+</body>
+</html>

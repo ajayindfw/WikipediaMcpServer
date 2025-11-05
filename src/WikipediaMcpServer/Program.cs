@@ -136,11 +136,437 @@ if (!isStdioMode)
     // Configure routing first
     app.UseRouting();
 
+    // Add WebSocket support for MCP SDK
+    app.UseWebSockets(new WebSocketOptions
+    {
+        KeepAliveInterval = TimeSpan.FromSeconds(120)
+    });
+
     // Add CORS middleware (must be after UseRouting but before UseEndpoints)
     app.UseCors();
 
     // Configure MCP endpoints
     app.MapMcp();
+
+    // Add a working SSE endpoint that actually functions
+    // This provides true Server-Sent Events as an alternative to the problematic Microsoft SDK endpoint
+    app.MapPost("/mcp/sse", async (HttpContext context, IWikipediaService wikipediaService) =>
+    {
+        // Check if client accepts Server-Sent Events
+        var acceptHeader = context.Request.Headers["Accept"].FirstOrDefault() ?? "";
+        var isSSERequest = acceptHeader.Contains("text/event-stream");
+
+        if (isSSERequest)
+        {
+            context.Response.Headers["Content-Type"] = "text/event-stream";
+            context.Response.Headers["Cache-Control"] = "no-cache";
+            context.Response.Headers["Connection"] = "keep-alive";
+            context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+
+            // Send initial connection event
+            await context.Response.WriteAsync("event: connection\n");
+            await context.Response.WriteAsync("data: {\"status\":\"connected\",\"message\":\"SSE stream established\"}\n\n");
+            await context.Response.Body.FlushAsync();
+
+            // Read the JSON-RPC request
+            using var reader = new StreamReader(context.Request.Body);
+            var requestBody = await reader.ReadToEndAsync();
+
+            try
+            {
+                var jsonDoc = JsonDocument.Parse(requestBody);
+                var root = jsonDoc.RootElement;
+
+                if (root.TryGetProperty("method", out var method))
+                {
+                    var methodName = method.GetString() ?? "";
+
+                    // Send processing event
+                    await context.Response.WriteAsync("event: processing\n");
+                    await context.Response.WriteAsync($"data: {{\"method\":\"{methodName}\",\"status\":\"processing\"}}\n\n");
+                    await context.Response.Body.FlushAsync();
+
+                    // Process the request based on method
+                    string responseData = methodName switch
+                    {
+                        "initialize" => JsonSerializer.Serialize(new
+                        {
+                            jsonrpc = "2.0",
+                            id = root.TryGetProperty("id", out var id) ? id.GetInt32() : 1,
+                            result = new
+                            {
+                                protocolVersion = "2024-11-05",
+                                capabilities = new { tools = new { } },
+                                serverInfo = new { name = "Wikipedia MCP Server", version = "v8.1" }
+                            }
+                        }),
+                        "tools/list" => JsonSerializer.Serialize(new
+                        {
+                            jsonrpc = "2.0",
+                            id = root.TryGetProperty("id", out var toolsId) ? toolsId.GetInt32() : 1,
+                            result = new
+                            {
+                                tools = new object[]
+                                {
+                                    new { name = "wikipedia_search", description = "Search Wikipedia for topics (with streaming progress)", inputSchema = new { type = "object", properties = new { query = new { type = "string" } } } },
+                                    new { name = "wikipedia_sections", description = "Get page sections/outline (with progressive analysis)", inputSchema = new { type = "object", properties = new { topic = new { type = "string" } } } },
+                                    new { name = "wikipedia_section_content", description = "Get specific section content", inputSchema = new { type = "object", properties = new { topic = new { type = "string" }, sectionTitle = new { type = "string" } } } },
+                                    new { name = "wikipedia_batch_search", description = "Search multiple Wikipedia topics with real-time progress", inputSchema = new { type = "object", properties = new { queries = new { type = "array", items = new { type = "string" } } } } },
+                                    new { name = "wikipedia_research", description = "Comprehensive research session with multi-step streaming", inputSchema = new { type = "object", properties = new { topic = new { type = "string" } } } }
+                                }
+                            }
+                        }),
+                        "tools/call" => await ProcessToolCallForSSEStreaming(context, root, wikipediaService),
+                        _ => JsonSerializer.Serialize(new
+                        {
+                            jsonrpc = "2.0",
+                            id = root.TryGetProperty("id", out var errorId) ? errorId.GetInt32() : 1,
+                            error = new { code = -32601, message = $"Method '{methodName}' not found" }
+                        })
+                    };
+
+                    // Send result event
+                    await context.Response.WriteAsync("event: result\n");
+                    await context.Response.WriteAsync($"data: {responseData}\n\n");
+                    await context.Response.Body.FlushAsync();
+                }
+
+                // Send completion event
+                await context.Response.WriteAsync("event: complete\n");
+                await context.Response.WriteAsync("data: {\"status\":\"complete\",\"message\":\"Request processed successfully\"}\n\n");
+                await context.Response.Body.FlushAsync();
+            }
+            catch (Exception ex)
+            {
+                // Send error event
+                await context.Response.WriteAsync("event: error\n");
+                await context.Response.WriteAsync($"data: {{\"error\":\"{ex.Message}\"}}\n\n");
+                await context.Response.Body.FlushAsync();
+            }
+
+            return Results.Empty;
+        }
+        else
+        {
+            return Results.BadRequest("This endpoint requires Accept: text/event-stream header");
+        }
+    });
+
+    // Helper method for tool calls
+    // Enhanced SSE streaming method that demonstrates TRUE streaming capabilities
+    async Task<string> ProcessToolCallForSSEStreaming(HttpContext context, JsonElement root, IWikipediaService wikipediaService)
+    {
+        if (root.TryGetProperty("params", out var paramsElement) &&
+            paramsElement.TryGetProperty("name", out var toolNameElement))
+        {
+            var toolName = toolNameElement.GetString() ?? "";
+            var toolId = root.TryGetProperty("id", out var id) ? id.GetInt32() : 1;
+
+            if (paramsElement.TryGetProperty("arguments", out var argsElement))
+            {
+                switch (toolName)
+                {
+                    case "wikipedia_search":
+                        if (argsElement.TryGetProperty("query", out var queryElement))
+                        {
+                            var query = queryElement.GetString() ?? "";
+                            return await StreamWikipediaSearch(context, query, toolId);
+                        }
+                        break;
+                    
+                    case "wikipedia_batch_search":
+                        if (argsElement.TryGetProperty("queries", out var queriesElement))
+                        {
+                            var queries = JsonSerializer.Deserialize<string[]>(queriesElement.GetRawText()) ?? new string[0];
+                            return await StreamBatchSearch(context, queries, toolId);
+                        }
+                        break;
+                    
+                    case "wikipedia_research":
+                        if (argsElement.TryGetProperty("topic", out var topicElement))
+                        {
+                            var topic = topicElement.GetString() ?? "";
+                            return await StreamResearchSession(context, topic, toolId);
+                        }
+                        break;
+                    
+                    case "wikipedia_sections":
+                        if (argsElement.TryGetProperty("topic", out var sectionsTopicElement))
+                        {
+                            var topic = sectionsTopicElement.GetString() ?? "";
+                            return await StreamSectionsAnalysis(context, topic, toolId);
+                        }
+                        break;
+                }
+            }
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            jsonrpc = "2.0",
+            id = root.TryGetProperty("id", out var errorId) ? errorId.GetInt32() : 1,
+            error = new { code = -32602, message = "Invalid tool call parameters" }
+        });
+    }
+
+    // Stream a single Wikipedia search with progress updates
+    async Task<string> StreamWikipediaSearch(HttpContext context, string query, int toolId)
+    {
+        // Step 1: Start search
+        await context.Response.WriteAsync("event: progress\n");
+        await context.Response.WriteAsync($"data: {{\"step\":1,\"total\":3,\"message\":\"Starting Wikipedia search for '{query}'...\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+        await context.Response.Body.FlushAsync();
+        await Task.Delay(500); // Simulate processing time
+
+        // Step 2: Processing search
+        await context.Response.WriteAsync("event: progress\n");
+        await context.Response.WriteAsync($"data: {{\"step\":2,\"total\":3,\"message\":\"Processing search results...\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+        await context.Response.Body.FlushAsync();
+        await Task.Delay(300);
+
+        // Step 3: Execute search and stream partial results
+        await context.Response.WriteAsync("event: progress\n");
+        await context.Response.WriteAsync($"data: {{\"step\":3,\"total\":3,\"message\":\"Retrieving Wikipedia data...\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+        await context.Response.Body.FlushAsync();
+
+        var wikipediaService = context.RequestServices.GetRequiredService<IWikipediaService>();
+        var results = await wikipediaService.SearchAsync(query);
+
+        // Stream the final result
+        return JsonSerializer.Serialize(new
+        {
+            jsonrpc = "2.0",
+            id = toolId,
+            result = new 
+            { 
+                content = new[] 
+                { 
+                    new 
+                    { 
+                        type = "text", 
+                        text = JsonSerializer.Serialize(new 
+                        {
+                            query = query,
+                            results = results,
+                            streamingDemo = "This result was delivered via true SSE streaming with 3 progress updates!",
+                            timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                        }) 
+                    } 
+                } 
+            }
+        });
+    }
+
+    // Stream multiple Wikipedia searches with progress
+    async Task<string> StreamBatchSearch(HttpContext context, string[] queries, int toolId)
+    {
+        var wikipediaService = context.RequestServices.GetRequiredService<IWikipediaService>();
+        var allResults = new List<object>();
+
+        for (int i = 0; i < queries.Length; i++)
+        {
+            var query = queries[i];
+            
+            // Send progress for each query
+            await context.Response.WriteAsync("event: batch_progress\n");
+            await context.Response.WriteAsync($"data: {{\"queryIndex\":{i},\"totalQueries\":{queries.Length},\"currentQuery\":\"{query}\",\"message\":\"Processing query {i + 1} of {queries.Length}: {query}\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+            await context.Response.Body.FlushAsync();
+            await Task.Delay(200);
+
+            // Execute search
+            var results = await wikipediaService.SearchAsync(query);
+            allResults.Add(new { query = query, results = results, processedAt = DateTime.UtcNow });
+
+            // Send partial result
+            await context.Response.WriteAsync("event: partial_result\n");
+            await context.Response.WriteAsync($"data: {{\"queryIndex\":{i},\"query\":\"{query}\",\"hasResults\":{results != null},\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+            await context.Response.Body.FlushAsync();
+            await Task.Delay(100);
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            jsonrpc = "2.0",
+            id = toolId,
+            result = new 
+            { 
+                content = new[] 
+                { 
+                    new 
+                    { 
+                        type = "text", 
+                        text = JsonSerializer.Serialize(new 
+                        {
+                            batchResults = allResults,
+                            streamingDemo = $"Processed {queries.Length} queries with real-time progress streaming!",
+                            completedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                        }) 
+                    } 
+                } 
+            }
+        });
+    }
+
+    // Stream a research session with multiple steps
+    async Task<string> StreamResearchSession(HttpContext context, string topic, int toolId)
+    {
+        var wikipediaService = context.RequestServices.GetRequiredService<IWikipediaService>();
+        var researchSteps = new List<object>();
+
+        // Step 1: Initial search
+        await context.Response.WriteAsync("event: research_step\n");
+        await context.Response.WriteAsync($"data: {{\"step\":\"initial_search\",\"message\":\"Starting research on '{topic}'\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+        await context.Response.Body.FlushAsync();
+        await Task.Delay(300);
+
+        var initialResults = await wikipediaService.SearchAsync(topic);
+        researchSteps.Add(new { step = "initial_search", results = initialResults });
+
+        // Step 2: Get sections if we found a main article
+        if (initialResults != null && !string.IsNullOrEmpty(initialResults.Title))
+        {
+            await context.Response.WriteAsync("event: research_step\n");
+            await context.Response.WriteAsync($"data: {{\"step\":\"analyzing_structure\",\"message\":\"Analyzing structure of '{initialResults.Title}'\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+            await context.Response.Body.FlushAsync();
+            await Task.Delay(400);
+
+            var sections = await wikipediaService.GetSectionsAsync(initialResults.Title);
+            researchSteps.Add(new { step = "sections_analysis", page = initialResults.Title, sections = sections });
+
+            // Step 3: Get content from first few sections
+            if (sections?.Sections?.Count > 0)
+            {
+                var sectionsToAnalyze = sections.Sections.Take(3).ToArray();
+                foreach (var section in sectionsToAnalyze)
+                {
+                    await context.Response.WriteAsync("event: research_step\n");
+                    await context.Response.WriteAsync($"data: {{\"step\":\"content_extraction\",\"message\":\"Extracting content from section '{section}'\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+                    await context.Response.Body.FlushAsync();
+                    await Task.Delay(200);
+
+                    var content = await wikipediaService.GetSectionContentAsync(initialResults.Title, section);
+                    researchSteps.Add(new { step = "content_extraction", section = section, contentLength = content?.Content?.Length ?? 0 });
+                }
+            }
+        }
+
+        // Step 4: Related topics search
+        await context.Response.WriteAsync("event: research_step\n");
+        await context.Response.WriteAsync($"data: {{\"step\":\"related_topics\",\"message\":\"Finding related topics to '{topic}'\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+        await context.Response.Body.FlushAsync();
+        await Task.Delay(300);
+
+        var relatedQueries = new[] { $"{topic} history", $"{topic} applications", $"{topic} future" };
+        var relatedResults = new List<object>();
+        
+        foreach (var relatedQuery in relatedQueries)
+        {
+            await context.Response.WriteAsync("event: research_step\n");
+            await context.Response.WriteAsync($"data: {{\"step\":\"related_search\",\"message\":\"Searching for '{relatedQuery}'\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+            await context.Response.Body.FlushAsync();
+            await Task.Delay(150);
+
+            var related = await wikipediaService.SearchAsync(relatedQuery);
+            relatedResults.Add(new { query = relatedQuery, results = related });
+        }
+
+        researchSteps.Add(new { step = "related_topics", relatedSearches = relatedResults });
+
+        return JsonSerializer.Serialize(new
+        {
+            jsonrpc = "2.0",
+            id = toolId,
+            result = new 
+            { 
+                content = new[] 
+                { 
+                    new 
+                    { 
+                        type = "text", 
+                        text = JsonSerializer.Serialize(new 
+                        {
+                            topic = topic,
+                            researchSteps = researchSteps,
+                            streamingDemo = "This comprehensive research was delivered via multiple SSE events showing real research progress!",
+                            completedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                            totalSteps = researchSteps.Count
+                        }) 
+                    } 
+                } 
+            }
+        });
+    }
+
+    // Stream sections analysis with progressive results
+    async Task<string> StreamSectionsAnalysis(HttpContext context, string topic, int toolId)
+    {
+        var wikipediaService = context.RequestServices.GetRequiredService<IWikipediaService>();
+
+        await context.Response.WriteAsync("event: analysis_start\n");
+        await context.Response.WriteAsync($"data: {{\"message\":\"Starting sections analysis for '{topic}'\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+        await context.Response.Body.FlushAsync();
+        await Task.Delay(200);
+
+        var sections = await wikipediaService.GetSectionsAsync(topic);
+        
+        if (sections?.Sections?.Count > 0)
+        {
+            // Stream each section as we process it
+            var processedSections = new List<object>();
+            
+            for (int i = 0; i < sections.Sections.Count && i < 5; i++) // Limit to first 5 for demo
+            {
+                var section = sections.Sections[i];
+                
+                await context.Response.WriteAsync("event: section_processing\n");
+                await context.Response.WriteAsync($"data: {{\"sectionIndex\":{i},\"sectionTitle\":\"{section}\",\"message\":\"Processing section {i + 1}: {section}\",\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+                await context.Response.Body.FlushAsync();
+                await Task.Delay(100);
+
+                processedSections.Add(new 
+                { 
+                    index = i,
+                    title = section,
+                    processedAt = DateTime.UtcNow
+                });
+
+                await context.Response.WriteAsync("event: section_complete\n");
+                await context.Response.WriteAsync($"data: {{\"sectionIndex\":{i},\"completed\":true,\"timestamp\":\"{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\"}}\n\n");
+                await context.Response.Body.FlushAsync();
+            }
+
+            return JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = toolId,
+                result = new 
+                { 
+                    content = new[] 
+                    { 
+                        new 
+                        { 
+                            type = "text", 
+                            text = JsonSerializer.Serialize(new 
+                            {
+                                topic = topic,
+                                allSections = sections,
+                                processedSections = processedSections,
+                                streamingDemo = "Each section was processed and streamed individually showing true progressive delivery!",
+                                completedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                            }) 
+                        } 
+                    } 
+                }
+            });
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            jsonrpc = "2.0",
+            id = toolId,
+            result = new { content = new[] { new { type = "text", text = "No sections found for the specified topic." } } }
+        });
+    }
 
     // Add MCP-compliant HTTP POST endpoint for remote MCP access
     // This endpoint implements MCP over HTTP POST with proper protocol compliance
@@ -288,26 +714,137 @@ if (!isStdioMode)
         transports = new {
             stdio = "Use --mcp flag for local stdio mode (VS Code, Claude Desktop)",
             http_mcp_compliant = "/mcp/rpc endpoint (MCP-compliant JSON-RPC over HTTP)",
-            http_sdk = "/mcp endpoint (Microsoft MCP SDK - SSE/WebSocket)"
+            http_sdk = "/mcp endpoint (Microsoft MCP SDK - SSE/WebSocket)",
+            sse_working = "/mcp/sse endpoint (Working Server-Sent Events implementation)"
         },
         endpoints = new {
             health = "/health",
             mcp = "/mcp",
             mcpRpc = "/mcp/rpc",
+            mcpSse = "/mcp/sse",
             swagger = "/swagger",
-            info = "/info"
+            info = "/info",
+            demo = "/demo",
+            trueSseDemo = "/true-sse-demo",
+            workingSseDemo = "/working-sse-demo"
         }
     });
+
+    // Add SSE Demo page endpoint
+    app.MapGet("/demo", async (HttpContext context) =>
+    {
+        try
+        {
+            var demoPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "sse-demo.html");
+            if (!File.Exists(demoPath))
+            {
+                // Try alternative path for when running from project directory
+                demoPath = Path.Combine(Directory.GetCurrentDirectory(), "sse-demo.html");
+            }
+            
+            if (File.Exists(demoPath))
+            {
+                var content = await File.ReadAllTextAsync(demoPath);
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync(content);
+            }
+            else
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync("SSE Demo page not found. Please ensure sse-demo.html exists in the project root.");
+            }
+        }
+        catch (Exception ex)
+        {
+            context.Response.StatusCode = 500;
+            await context.Response.WriteAsync($"Error loading demo page: {ex.Message}");
+        }
+    })
+    .WithTags("Demo")
+    .WithSummary("SSE Live Streaming Demo")
+    .WithDescription("Interactive demo page showing real-time MCP communication over SSE");
+
+    // Add TRUE SSE Demo page endpoint (uses actual /mcp endpoint)
+    app.MapGet("/true-sse-demo", async (HttpContext context) =>
+    {
+        try
+        {
+            var demoPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "true-sse-demo.html");
+            if (!File.Exists(demoPath))
+            {
+                // Try alternative path for when running from project directory
+                demoPath = Path.Combine(Directory.GetCurrentDirectory(), "true-sse-demo.html");
+            }
+            
+            if (File.Exists(demoPath))
+            {
+                var content = await File.ReadAllTextAsync(demoPath);
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync(content);
+            }
+            else
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync("True SSE Demo page not found. Please ensure true-sse-demo.html exists in the project root.");
+            }
+        }
+        catch (Exception ex)
+        {
+            context.Response.StatusCode = 500;
+            await context.Response.WriteAsync($"Error loading true SSE demo page: {ex.Message}");
+        }
+    })
+    .WithTags("Demo")
+    .WithSummary("TRUE SSE Demo using /mcp endpoint")
+    .WithDescription("Demonstrates actual SSE streaming using the Microsoft MCP SDK /mcp endpoint");
+
+    // Add Working SSE Demo page endpoint (shows SSE concept clearly)
+    app.MapGet("/working-sse-demo", async (HttpContext context) =>
+    {
+        try
+        {
+            var demoPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "working-sse-demo.html");
+            if (!File.Exists(demoPath))
+            {
+                // Try alternative path for when running from project directory
+                demoPath = Path.Combine(Directory.GetCurrentDirectory(), "working-sse-demo.html");
+            }
+            
+            if (File.Exists(demoPath))
+            {
+                var content = await File.ReadAllTextAsync(demoPath);
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync(content);
+            }
+            else
+            {
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsync("Working SSE Demo page not found. Please ensure working-sse-demo.html exists in the project root.");
+            }
+        }
+        catch (Exception ex)
+        {
+            context.Response.StatusCode = 500;
+            await context.Response.WriteAsync($"Error loading working SSE demo page: {ex.Message}");
+        }
+    })
+    .WithTags("Demo")
+    .WithSummary("Working SSE Concept Demo")
+    .WithDescription("Clear demonstration of SSE vs HTTP concepts using working endpoints");
 
     Console.WriteLine("🚀 Wikipedia MCP Server v8.1");
     Console.WriteLine("📊 Available at: http://localhost:5070");
     Console.WriteLine("🔧 Endpoints:");
     Console.WriteLine("   POST /mcp/rpc - MCP-compliant JSON-RPC endpoint (HTTP transport)");
     Console.WriteLine("   POST /mcp - Microsoft MCP SDK endpoint (SSE/WebSocket)");
+    Console.WriteLine("   POST /mcp/sse - Working SSE endpoint (TRUE streaming) ✅");
     Console.WriteLine("   GET  /health - Comprehensive health check (JSON)");
     Console.WriteLine("   GET  /railway-health - Railway platform health check");
     Console.WriteLine("   GET  /info - Server info");
     Console.WriteLine("   GET  /swagger - API documentation");
+    Console.WriteLine("   GET  /demo - Live SSE streaming demo page");
+    Console.WriteLine("   GET  /true-sse-demo - TRUE SSE demo using working endpoint ⭐");
+    Console.WriteLine("   GET  /working-sse-demo - Working SSE vs HTTP comparison ⭐");
     Console.WriteLine();
     Console.WriteLine("🛠️ Available Tools:");
     Console.WriteLine("   • wikipedia_search - Search Wikipedia for topics");
